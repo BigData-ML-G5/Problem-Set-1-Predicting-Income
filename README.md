@@ -1,10 +1,11 @@
 # Problem-Set-1-Predicting-Income
 
-## Summary
+## Resumen
 
-### Project code description
+### Descripción metodología proyecto
 
-### Main conclusions
+### Conclusiones
 ---
 
-## Replication instructions
+## Instrucciones de replicación
+
