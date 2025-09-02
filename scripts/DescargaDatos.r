@@ -4,7 +4,8 @@
 # 0) Good practices, clean variables and libraries
 # 1) Web scraping to access the page
 # 2) Save the data in a structure
-# 3) Export the data to a .csv file
+# 3) Clean data and check variables
+# 4) Export the data to a .csv file
 # -----------------------------------------------------
 
 # -----------------------------------------------------
@@ -13,6 +14,10 @@
 
 # Clean environment and libraries
 rm(list = ls())
+
+# -----------------------------------------------------
+# 1) Web scraping to access the page
+# -----------------------------------------------------
 
 require(pacman)
 p_load(rvest, dplyr, tidyr, readr, httr, jsonlite)
@@ -29,38 +34,51 @@ links <- pagina %>%
 # Convert relative links to absolute 
 links <- ifelse(grepl("^http", links), links, paste0(url, links))
 
+# -----------------------------------------------------
+# 2) Save the data in a structure
+# -----------------------------------------------------
+# While doing the web scrapping, we found the table in each link is dinamic,
+# thus, checking into the structure of the html, we found it creates the table
+# with the data through a request to another we page. Therefore we will 
+# directly extract the data from this original web
+
 # Create empty final dataset
-base_final <- data.frame()
+db <- data.frame()
 
+link_base <- "https://ignaciomsarmiento.github.io/GEIH2018_sample/pages/geih_page_"
+link_end <- ".html"
+numbers <- c(1:10)
 
-
-subpag <- links[2]
-response <- GET(subpag)
-json_data <- content(response, as = "text", encoding = "UTF-8")
-standings <- fromJSON(json_data)
-
-standings_df <- as.data.frame(standings)
-
-
-
-
-subpag <- html_node(subpag, "table.table") %>%
-  html_table(fill=TRUE)
-
-
-
-# Loop through each link and extract data
-for (link in links) {
-  # Read the page of each link
-  subpagina <- read_html(link)
-
-  # Extract the table (adjust the selector according to the structure of each page)
-  tabla <- subpagina %>%
-    html_node("container-fluid") %>%
+upload_data <- function(numero) {
+  # Build the URL
+  test <- paste0(link_base, numero, link_end)
+  # Read the subpage
+  subpage_link <- read_html(test)
+  # Extract the table
+  table <- subpage_link %>%
+    html_node("table") %>%
     html_table()
-
-  # Add the data to the final dataset
-  base_final <- bind_rows(base_final, tabla)
+  # Add the data into final db
+  db <<- rbind(db, table)
 }
 
-# ...existing code...
+lapply(numbers, upload_data)
+
+
+# -----------------------------------------------------
+# 3) Clean data and check variables
+# -----------------------------------------------------
+
+
+
+
+
+# -----------------------------------------------------
+# 4) Export the data to a .csv file
+# -----------------------------------------------------
+
+
+
+
+
+
