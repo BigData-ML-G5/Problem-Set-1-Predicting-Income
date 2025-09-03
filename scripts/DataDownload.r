@@ -1,7 +1,7 @@
 # -----------------------------------------------------
 # PART 1
 # This script is for downloading data from the workshop.
-# 0) Good practices, clean variables and libraries
+# 0) Clean variables and Libraries
 # 1) Web scraping to access the page
 # 2) Save the data in a structure
 # 3) Clean data and check variables
@@ -12,15 +12,17 @@
 # 0) Good practices, clean variables and libraries
 # -----------------------------------------------------
 
-# Clean environment and libraries
+# Clean variables and Libraries
 rm(list = ls())
+
+require(pacman)
+p_load(rvest, dplyr, tidyr, readr, httr, jsonlite, boot)
 
 # -----------------------------------------------------
 # 1) Web scraping to access the page
 # -----------------------------------------------------
 
-require(pacman)
-p_load(rvest, dplyr, tidyr, readr, httr, jsonlite)
+
 
 # Access the page
 url <- "https://ignaciomsarmiento.github.io/GEIH2018_sample/"
