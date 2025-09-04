@@ -16,7 +16,7 @@
 rm(list = ls())
 
 require(pacman)
-p_load(rvest, dplyr, tidyr, readr, httr, jsonlite, boot)
+p_load(rvest, dplyr, tidyr, readr, httr, jsonlite, boot, lfe, ggplot2)
 
 # -----------------------------------------------------
 # 1) Web scraping to access the page
