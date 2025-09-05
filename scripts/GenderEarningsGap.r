@@ -120,3 +120,23 @@ ggplot(predictions, aes(x = edad, y = fit, color = sexo, fill = sexo)) +
     fill = "Gender"
   ) +
   theme_minimal()
+
+# -----------------------------------------------------
+# 3.2) Estimate peak ages
+# -----------------------------------------------------
+
+# TODO: Quiero probar como sirve, pero podría solo sacar max de preds
+
+# Function to calculate peak age
+calculate_peak_age <- function(model) {
+  coef_model <- coef(model)
+  peak_age <- -coef_model["edad"] / (2 * coef_model["poly(edad, 2)2"])
+  return(peak_age)
+}
+
+# Calculate peak ages for men and women
+peak_age_men <- calculate_peak_age(model_men)
+peak_age_women <- calculate_peak_age(model_women)
+
+cat("Peak Age for Men:", peak_age_men, "\n")
+cat("Peak Age for Women:", peak_age_women, "\n")
