@@ -140,3 +140,29 @@ peak_age_women <- calculate_peak_age(model_women)
 
 cat("Peak Age for Men:", peak_age_men, "\n")
 cat("Peak Age for Women:", peak_age_women, "\n")
+
+# -----------------------------------------------------
+# 3.3) Estimate confidence intervals
+# -----------------------------------------------------
+
+# Bootstrap function for peak age
+peak_age_boot_fn <- function(data, index, gender) {
+  boot_data <- data[index, ]
+  model <- lm(log(salario) ~ edad + I(edad^2), data = boot_data %>% filter(sexo == gender))
+  return(calculate_peak_age(model))
+}
+
+# Bootstrap for men
+set.seed(123)
+boot_men <- boot(db, function(data, index) peak_age_boot_fn(data, index, gender = 0), R = 1000)
+
+# Bootstrap for women
+set.seed(123)
+boot_women <- boot(db, function(data, index) peak_age_boot_fn(data, index, gender = 1), R = 1000)
+
+# Confidence intervals for peak ages
+ci_men <- boot.ci(boot_men, type = "perc")
+ci_women <- boot.ci(boot_women, type = "perc")
+
+cat("95% CI for Peak Age (Men):", ci_men$percent[4:5], "\n")
+cat("95% CI for Peak Age (Women):", ci_women$percent[4:5], "\n")
