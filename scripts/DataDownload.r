@@ -70,7 +70,218 @@ lapply(numbers, upload_data)
 # -----------------------------------------------------
 # 3) Clean data and check variables
 # -----------------------------------------------------
+# The GEIH database contains a large number of variables, so we must first 
+# select those that we specifically need for this project our analysis will 
+# be restricted to working adults (individuals aged 18+ who are employed) from 
+# the GEIH database
+names(db) #Check the existing names
+# With the Manuel Fernandez document, change the names for something we could recall what it means
+# delete columns without names
+db <- db[, !is.na(names(db)) & names(db) != ""]
+db <- db %>%
+  rename(
+    gender = sex,
+    parentesco_jefe_hogar = p6050,
+    afiliado_seguridad_social = p6090,
+    regimen_salud = p6100,
+    nivel_educativo = p6210,
+    grado_aprobado = p6210s1,
+    actividad_semana_pasada = p6240,
+    tiempo_empresa_actual = p6426,
+    ingreso_trabajo_principal = p6500,
+    recibio_horas_extras = p6510,
+    valor_horas_extras = p6510s1,
+    incluyo_horas_extras = p6510s2,
+    recibio_primas = p6545,
+    valor_primas = p6545s1,
+    incluyo_primas = p6545s2,
+    recibio_bonificaciones = p6580,
+    valor_bonificaciones = p6580s1,
+    incluyo_bonificaciones = p6580s2,
+    subsidio_alimentacion = p6585s1,
+    valor_subsidio_alimentacion = p6585s1a1,
+    incluyo_subsidio_alimentacion = p6585s1a2,
+    subsidio_transporte = p6585s2,
+    valor_subsidio_transporte = p6585s2a1,
+    incluyo_subsidio_transporte = p6585s2a2,
+    subsidio_familiar = p6585s3,
+    valor_subsidio_familiar = p6585s3a1,
+    incluyo_subsidio_familiar = p6585s3a2,
+    subsidio_educativo = p6585s4,
+    valor_subsidio_educativo = p6585s4a1,
+    incluyo_subsidio_educativo = p6585s4a2,
+    recibio_alimentos_trabajo = p6590,
+    valor_alimentos_trabajo = p6590s1,
+    recibio_vivienda_trabajo = p6600,
+    valor_vivienda_trabajo = p6600s1,
+    transporte_empresa = p6610,
+    valor_transporte_empresa = p6610s1,
+    otros_ingresos_especie = p6620,
+    valor_otros_especie = p6620s1,
+    prima_servicios = p6630s1,
+    valor_prima_servicios = p6630s1a1,
+    prima_navidad = p6630s2,
+    valor_prima_navidad = p6630s2a1,
+    prima_vacaciones = p6630s3,
+    valor_prima_vacaciones = p6630s3a1,
+    viaticos_permanentes = p6630s4,
+    valor_viaticos_permanentes = p6630s4a1,
+    bonificaciones_anuales = p6630s6,
+    valor_bonificaciones_anuales = p6630s6a1,
+    ganancia_neta_mes = p6750,
+    meses_ganancia_corresponde = p6760,
+    ganancia_neta_12_meses = p550,
+    tamano_empresa = p6870,
+    cotiza_pension_actual = p6920,
+    tiene_segundo_trabajo = p7040,
+    posicion_segundo_trabajo = p7050,
+    ingreso_segundo_trabajo = p7070,
+    quiere_trabajar_mas_horas = p7090,
+    hizo_diligencias_mas_horas = p7110,
+    disponible_mas_horas = p7120,
+    cambiar_por_capacidades = p7140s1,
+    cambiar_por_ingresos = p7140s2,
+    diligencias_cambiar_trabajo = p7150,
+    disponible_nuevo_trabajo = p7160,
+    primera_vez_o_trabajo_antes = p7310,
+    posicion_ultimo_trabajo = p7350,
+    ingresos_trabajo_desocupado = p7422,
+    valor_ingresos_desocupado = p7422s1,
+    ingresos_trabajo_inactivo = p7472,
+    valor_ingresos_inactivo = p7472s1,
+    recibio_arriendos_pensiones = p7495,
+    arriendos_propiedades = p7500s1,
+    valor_arriendos = p7500s1a1,
+    pensiones_jubilaciones = p7500s2,
+    valor_pensiones = p7500s2a1,
+    pension_alimenticia = p7500s3,
+    valor_pension_alimenticia = p7500s3a1,
+    recibio_transferencias_12m = p7505,
+    dinero_hogares_pais = p7510s1,
+    valor_dinero_hogares_pais = p7510s1a1,
+    dinero_hogares_exterior = p7510s2,
+    valor_dinero_exterior = p7510s2a1,
+    ayudas_instituciones = p7510s3,
+    valor_ayudas_instituciones = p7510s3a1,
+    intereses_dividendos = p7510s5,
+    valor_intereses_dividendos = p7510s5a1,
+    cesantias_intereses = p7510s6,
+    valor_cesantias = p7510s6a1,
+    otros_ingresos_fuentes = p7510s7,
+    valor_otros_ingresos = p7510s7a1,
+    poblacion_edad_trabajar = pet,
+    inactivo = ina,
+    ocupado = ocu,
+    desocupado = dsi,
+    poblacion_economicamente_activa = pea,
+    inactivos = inac,
+    working_age_population = wap,
+    tamano_firma = sizeFirm,
+    total_horas_trabajadas = totalHoursWorked,
+    ingreso_actividad_principal_obs = impa,
+    ingreso_segunda_actividad_obs = isa,
+    ingreso_especie_obs = ie,
+    ingreso_desocupados_inactivos_obs = imdi,
+    ingreso_intereses_dividendos_obs = iof1,
+    ingreso_pensiones_obs = iof2,
+    ingreso_ayudas_hogares_obs = iof3h,
+    ingreso_ayudas_instituciones_obs = iof3i,
+    ingreso_arriendos_obs = iof6,
+    estado_imputacion_actividad_principal = cclasnr2,
+    estado_imputacion_segunda_actividad = cclasnr3,
+    estado_imputacion_especie = cclasnr4,
+    estado_imputacion_desocupados_inactivos = cclasnr5,
+    estado_imputacion_intereses = cclasnr6,
+    estado_imputacion_pensiones = cclasnr7,
+    estado_imputacion_ayudas = cclasnr8,
+    estado_imputacion_arriendos = cclasnr11,
+    ingreso_actividad_principal_imp = impaes,
+    ingreso_segunda_actividad_imp = isaes,
+    ingreso_especie_imp = iees,
+    ingreso_desocupados_inactivos_imp = imdies,
+    ingreso_intereses_dividendos_imp = iof1es,
+    ingreso_pensiones_imp = iof2es,
+    ingreso_ayudas_hogares_imp = iof3hes,
+    ingreso_ayudas_instituciones_imp = iof3ies,
+    ingreso_arriendos_imp = iof6es,
+    ingreso_total_observado = ingtotob,
+    ingreso_total_imputado = ingtotes,
+    ingreso_total_final = ingtot,
+    salario_mensual = y_salary_m,
+    salario_mensual_horas_usuales = y_salary_m_hu,
+    ingreso_laboral_mensual = y_ingLab_m,
+    ingresos_horas_extras_m = y_horasExtras_m,
+    ingresos_especie_m = y_especie_m,
+    ingresos_vivienda_m = y_vivienda_m,
+    otros_ingresos_m = y_otros_m,
+    auxilio_alimentacion_m = y_auxilioAliment_m,
+    auxilio_transporte_m = y_auxilioTransp_m,
+    subsidio_familiar_m = y_subFamiliar_m,
+    subsidio_educativo_m = y_subEducativo_m,
+    primas_mensuales = y_primas_m,
+    bonificaciones_mensuales = y_bonificaciones_m,
+    prima_servicios_m = y_primaServicios_m,
+    prima_navidad_m = y_primaNavidad_m,
+    prima_vacaciones_m = y_primaVacaciones_m,
+    viaticos_m = y_viaticos_m,
+    seguros_accidentes_m = y_accidentes_m,
+    salario_segundo_trabajo_m = y_salarySec_m,
+    ingreso_laboral_horas_actuales = y_ingLab_m_ha,
+    ganancia_neta_mensual = y_gananciaNeta_m,
+    ganancia_neta_agro_m = y_gananciaNetaAgro_m,
+    ganancia_independiente_m = y_gananciaIndep_m,
+    ganancia_independiente_horas_usuales = y_gananciaIndep_m_hu,
+    ingreso_total_mensual = y_total_m,
+    ingreso_total_horas_actuales = y_total_m_ha,
+    factor_expansion_anual = fex_c,
+    departamento = depto,
+    factor_expansion_departamental = fex_dpto,
+    factor_ponderacion = fweight,
+    maximo_nivel_educativo = maxEducLevel,
+    educacion_superior = college,
+    registrado_salud = regSalud,
+    cotiza_pension = cotPension,
+    relacion_laboral = relab
+  )
 
+library(skimr)
+# skim the number of missing values
+db_miss <- skim(db) %>% select(skim_variable, n_missing)
+# view missing values as percentage
+nobs <- nrow(db) # number of observations
+db_miss<- db_miss %>% mutate(p_missing= n_missing/nobs) # new variable of number of NA
+db_miss <- db_miss %>% arrange(-n_missing) # descendant order
+db_miss<- db_miss %>% filter(n_missing!= 0) # keep only NA
+head(db_miss, 10) # Show the 10 first observations
+#Check if the 80% plus missing value columns are worth it or can be deleted
+
+## FALTA REVISAR
+
+#delete those variables with more than 80% of missing values
+db_clean <- db %>% select(-all_of(db_miss$skim_variable[db_miss$p_missing > 0.8]))
+names(db_clean)
+
+# Create a variable number of minors
+db <- db %>%
+  mutate(bin_minor = ifelse(test = age <= 18, yes = 1, no = 0))
+
+db <- db %>%
+  group_by(directorio, secuencia_p) %>%
+  mutate(num_minors = sum(bin_minor, na.rm = TRUE)) %>%
+  select(-bin_minor) %>% 
+  ungroup()
+
+# Create a variable to identify the household head
+db <- db %>% mutate(bin_head = ifelse(test = parentesco_jefe_hogar == 1, yes = 1, no = 0))
+
+# Create a variable to identify if the household head is female
+db <- db %>% mutate(bin_headFemale = bin_head*(1-gender))
+
+# Keep data with positive hours worked
+db <- db %>% filter(total_horas_trabajadas>0)
+
+# Keep only individuals 18 years and older
+db <- db %>% filter(age>18)
 
 
 
