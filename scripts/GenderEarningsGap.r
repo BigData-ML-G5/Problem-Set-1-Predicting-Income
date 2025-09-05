@@ -45,3 +45,34 @@ summary(fwl_model)
 controls <- c("edad", "edad2", "educ", "educ2", "experiencia", "experiencia2", "ocupacion", "industria", "region")
 formula <- as.formula(paste("log(salario) ~ sexo |", paste(controls, collapse = " + ")))
 conditional_wage_gap_model <- felm(formula, data = db)
+
+# -----------------------------------------------------
+# 2.2) Conditional earnings gap with worker and job controls (FWL and bootstrap)
+# -----------------------------------------------------
+
+# FWL function for bootstrapping
+fwl_boot_fn <- function(data, index) {
+  # Subset the data using the bootstrap index
+  boot_data <- data[index, ]
+  
+  # Step 1: Partial out controls from log(salario)
+  fmla_y <- as.formula(paste("log(salario) ~", paste(controls, collapse = " + ")))
+  residuals_y <- lm(fmla_y, data = boot_data)$residuals
+  
+  # Step 2: Partial out controls from sexo
+  fmla_x <- as.formula(paste("sexo ~", paste(controls, collapse = " + ")))
+  residuals_x <- lm(fmla_x, data = boot_data)$residuals
+  
+  # Step 3: Regress residuals_y on residuals_x and return the coefficient for residuals_x
+  fwl_model <- lm(residuals_y ~ residuals_x)
+  return(coef(fwl_model)["residuals_x"])
+}
+
+# Bootstrap
+# TODO: paramétrico o no? hay semilla?
+std_errors <- boot(db, eta_fn, R=1000)
+std_errors
+
+# Confidence intervals
+# TODO: por qué type perc? revisar
+intervals <- boot.ci(std_errors, type = "perc", index = 2) # index
