@@ -76,3 +76,47 @@ std_errors
 # Confidence intervals
 # TODO: por qué type perc? revisar
 intervals <- boot.ci(std_errors, type = "perc", index = 2) # index
+
+# -----------------------------------------------------
+# 3) Plot predicted age-wage profile with confidence intervals
+# -----------------------------------------------------
+
+# -----------------------------------------------------
+# 3.1) Estimate age-wage profile
+# -----------------------------------------------------
+
+# Fit separate models for men and women
+# TODO: revisar el valor de las dummys
+model_men <- lm(log(salario) ~ edad + poly(edad, 2), data = db %>% filter(sexo == 0))
+model_women <- lm(log(salario) ~ edad + poly(edad, 2), data = db %>% filter(sexo == 1))
+
+# Generate age sequence so we can estimate it
+# TODO: min debe ser minoría edad, max revisar
+age_seq <- seq(min(db$edad), max(db$edad), by = 1)
+
+# Predict wages for men
+pred_men <- predict(model_men, newdata = data.frame(edad = age_seq), interval = "confidence")
+pred_men <- data.frame(edad = age_seq, pred_men)
+
+# Predict wages for women
+pred_women <- predict(model_women, newdata = data.frame(edad = age_seq), interval = "confidence")
+pred_women <- data.frame(edad = age_seq, pred_women)
+
+# Combine predictions into a single data frame
+predictions <- bind_rows(
+  pred_men %>% mutate(sexo = "Men"),
+  pred_women %>% mutate(sexo = "Women")
+)
+
+# Plot the predicted age-wage profiles
+ggplot(predictions, aes(x = edad, y = fit, color = sexo, fill = sexo)) +
+  geom_line(size = 1) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+  labs(
+    title = "Predicted Age-Wage Profiles by Gender",
+    x = "Age",
+    y = "Log(Wage)",
+    color = "Gender",
+    fill = "Gender"
+  ) +
+  theme_minimal()
