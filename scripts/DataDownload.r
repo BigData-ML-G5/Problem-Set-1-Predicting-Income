@@ -290,6 +290,9 @@ db <- db %>% filter(total_horas_trabajadas>0)
 # Keep only individuals 18 years and older
 db <- db %>% filter(age>18)
 
+# Create age squared
+db <- db %>% mutate(age2 = age*age)
+
 #TODO: están quedndo 19k / 36k, no sé si esté bien
 
 # -----------------------------------------------------
@@ -312,7 +315,9 @@ ggplot(db, aes(x = ingreso_total_mensual)) +
 # Total Income / Hours Worked
 db <- db %>%
   mutate(
-    ingreso_por_hora = ingreso_total_final / (total_horas_trabajadas * 4.33), # Multiplied by 4.33 to change from Weekly to Monthly
+    # Adjust total_wage so no number is 0
+    # Multiplied by 4.33 to change from Weekly to Monthly
+    ingreso_por_hora = ifelse(ingreso_total_final == 0, 1, ingreso_total_final / (total_horas_trabajadas * 4.33)),
     log_ingreso_por_hora = log(ingreso_por_hora)
   )
 
@@ -396,7 +401,7 @@ verify_nulls <- function(var_name) {
   ifelse(var_name %in% cols, sum(is.na(db[[var_name]])), "var not found")
 }
 
-verify_nulls("log_ingreso_por_hora")
+verify_nulls("ingreso_por_hora")
 
 # p6090 (afiliado a seguridad social), p6210 (nivel educativo max), p7040 (tenía otro trabajo?)
 # p7070 (cuánto recibió en ese 2ndo trabajo),
