@@ -4,8 +4,11 @@
 # 0) Clean variables and Libraries
 # 1) Web scraping to access the page
 # 2) Save the data in a structure
-# 3) Clean data and check variables
-# 4) Export the data to a .csv file
+# 3) Clean data and create variables
+# 4) Descriptive statistics
+#    4.1) Check variables distributions (histograms)
+#    4.2) Imputation of missing values
+#    4.3) Statistics on variables to check for correlation
 # -----------------------------------------------------
 
 # -----------------------------------------------------
@@ -39,12 +42,13 @@ links <- ifelse(grepl("^http", links), links, paste0(url, links))
 # -----------------------------------------------------
 # While doing the web scrapping, we found the table in each link is dinamic,
 # thus, checking into the structure of the html, we found it creates the table
-# with the data through a request to another we page. Therefore we will 
+# obtaining the data through a request to another web page. Therefore we will 
 # directly extract the data from this original web
 
 # Create empty final dataset
 db <- data.frame()
 
+# Create the url base and end to iterate the 10 chunks
 link_base <- "https://ignaciomsarmiento.github.io/GEIH2018_sample/pages/geih_page_"
 link_end <- ".html"
 numbers <- c(1:10)
@@ -65,19 +69,22 @@ upload_data <- function(numero) {
 lapply(numbers, upload_data)
 
 # -----------------------------------------------------
-# 3) Clean data and check variables
+# 3) Clean data and create variables
 # -----------------------------------------------------
 # The GEIH database contains a large number of variables, so we must first 
-# select those that we specifically need for this project our analysis will 
+# select those that we specifically need for this project. Our analysis will 
 # be restricted to working adults (individuals aged 18+ who are employed) from 
 # the GEIH database
-names(db) #Check the existing names
-# With the Manuel Fernandez document, change the names for something we could recall what it means
-# delete columns without names
+
+ #Check the existing names
+names(db)
+
+# With the Manuel Fernandez document, we renamed the varibles to make them 
+# understandable; delete columns without names
 db <- db[, !is.na(names(db)) & names(db) != ""]
 db <- db %>%
   rename(
-    gender = sex,
+    hombre = sex,
     parentesco_jefe_hogar = p6050,
     afiliado_seguridad_social = p6090,
     regimen_salud = p6100,
@@ -243,6 +250,7 @@ db <- db %>%
 
 # skim the number of missing values
 db_miss <- skim(db) %>% select(skim_variable, n_missing)
+
 # view missing values as percentage
 nobs <- nrow(db) # number of observations
 db_miss<- db_miss %>% mutate(p_missing= n_missing/nobs) # new variable of number of NA
@@ -251,13 +259,16 @@ db_miss<- db_miss %>% filter(n_missing!= 0) # keep only NA
 head(db_miss, 10) # Show the 10 first observations
 #Check if the 80% plus missing value columns are worth it or can be deleted
 
-## FALTA REVISAR
+## TODO: FALTA REVISAR
+# TODO: Las que sean categóricas +2 categorías transformar as.factor
 
 #delete those variables with more than 80% of missing values
 db_clean <- db %>% select(-all_of(db_miss$skim_variable[db_miss$p_missing > 0.8]))
 names(db_clean)
 
 # Create a variable number of minors
+# TODO: 1) está cambiando datos sobre db, no db_clean
+# TODO: 2) quitar positive_hours_worked quita N/A, quedan 9783
 db <- db %>%
   mutate(bin_minor = ifelse(test = age <= 18, yes = 1, no = 0))
 
@@ -271,7 +282,7 @@ db <- db %>%
 db <- db %>% mutate(bin_head = ifelse(test = parentesco_jefe_hogar == 1, yes = 1, no = 0))
 
 # Create a variable to identify if the household head is female
-db <- db %>% mutate(bin_headFemale = bin_head*(1-gender))
+db <- db %>% mutate(bin_headFemale = bin_head*(1-hombre))
 
 # Keep data with positive hours worked
 db <- db %>% filter(total_horas_trabajadas>0)
@@ -279,27 +290,23 @@ db <- db %>% filter(total_horas_trabajadas>0)
 # Keep only individuals 18 years and older
 db <- db %>% filter(age>18)
 
-# Descriptive Statistics
-# Hours Worked
-ggplot(db, aes(x = total_horas_trabajadas)) +
-  geom_histogram(bins = 30) +
-  labs(title = "Histogram Total Hours Worked",
-       x = "Hours Worked",
-       y = "Frequency")
+#TODO: están quedndo 19k / 36k, no sé si esté bien
+
+# -----------------------------------------------------
+# 4) Descriptive statistics
+# -----------------------------------------------------
+
+# -----------------------------------------------------
+# 4.1) Check variables distributions (histograms)
+# -----------------------------------------------------
 
 # Total Income
+# TODO: put units to title
+# TODO: Podemos imputar por promedio por grupo cada año
 ggplot(db, aes(x = ingreso_total_mensual)) +
   geom_histogram(bins = 30) +
   labs(title = "Histogram Total Income",
        x = "Monthly Income",
-       y = "Frequency")
-# The distribution exhibits a long right tail, necessitating a logarithmic transformation
-
-# Age
-ggplot(db, aes(x = age)) +
-  geom_histogram(bins = 30) +
-  labs(title = "Histogram Age",
-       x = "Age",
        y = "Frequency")
 
 # Total Income / Hours Worked
@@ -321,15 +328,77 @@ ggplot(db, aes(x = log_ingreso_por_hora)) +
        x = "log Income by hour",
        y = "Frequency")
 
+# Hours Worked
+# TODO: put unites to title
+# TODO: no me parece tan bien distribuida; sqrt funciona mejor, pero no convence
+ggplot(db, aes(x = total_horas_trabajadas)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Histogram Total Hours Worked",
+       x = "Hours Worked",
+       y = "Frequency")
+
+# Age
+# TODO: no sé si la necesitamos realmente
+ggplot(db, aes(x = age)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Histogram Age",
+       x = "Age",
+       y = "Frequency")
+
+# -----------------------------------------------------
+# 4.2) Imputation of missing values
+# -----------------------------------------------------
+
+# Income missing % by age
+db %>%
+  group_by(age) %>%
+  summarise(
+    n = n(),
+    n_miss = sum(is.na(ingreso_por_hora)),
+    p_miss = n_miss / n
+  ) %>%
+  ggplot(aes(x = age, y = p_miss)) +
+  geom_bar(stat = "identity", width = 1) +
+  labs(
+    title = "Proportion of missing values of Income by Age",
+    x = "Age",
+    y = "Proportion of missing values"
+  ) +
+  theme_minimal() +
+  geom_line(aes(group = 1), color = "blue") +
+  geom_point(data = . %>% filter(age == 18), aes(x = age, y = p_miss), color = "red", size = 3)
+
+# Imputate missing values of income by age group mean
+# We use age because it is a variable with 100% data, thus, no N/A conflict
+# TODO: hay que filtrar por si está desocupado (algo así), porque puede estar estudiando
+db <- db %>%
+  group_by(age) %>%
+  mutate(
+    ingreso_por_hora = ifelse(is.na(ingreso_por_hora), mean(ingreso_por_hora, na.rm = TRUE), ingreso_por_hora),
+    log_ingreso_por_hora = ifelse(is.na(log_ingreso_por_hora), mean(log_ingreso_por_hora, na.rm = TRUE), log_ingreso_por_hora)
+  ) %>%
+  ungroup()
+
+# -----------------------------------------------------
+# 4.3) Statistics on variables to check for correlation
+# -----------------------------------------------------
+
 ## Seleccionar variables de control y poner sus estadisticas descriptivas
 ## Manejo de missing values de variables seleccionadas
 
-# -----------------------------------------------------
-# 4) Export the data to a .csv file
-# -----------------------------------------------------
+
+# Check nulls amount for a specific variable
 
 
+cols <- colnames(db)
 
+verify_nulls <- function(var_name) {
+  ifelse(var_name %in% cols, sum(is.na(db[[var_name]])), "var not found")
+}
 
+verify_nulls("log_ingreso_por_hora")
+
+# p6090 (afiliado a seguridad social), p6210 (nivel educativo max), p7040 (tenía otro trabajo?)
+# p7070 (cuánto recibió en ese 2ndo trabajo),
 
 
