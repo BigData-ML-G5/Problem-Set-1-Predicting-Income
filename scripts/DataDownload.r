@@ -16,13 +16,11 @@
 rm(list = ls())
 
 require(pacman)
-p_load(rvest, dplyr, tidyr, readr, httr, jsonlite, boot, lfe, ggplot2)
+p_load(rvest, dplyr, tidyr, readr, httr, jsonlite, boot, lfe, ggplot2, skimr)
 
 # -----------------------------------------------------
 # 1) Web scraping to access the page
 # -----------------------------------------------------
-
-
 
 # Access the page
 url <- "https://ignaciomsarmiento.github.io/GEIH2018_sample/"
@@ -65,7 +63,6 @@ upload_data <- function(numero) {
 }
 
 lapply(numbers, upload_data)
-
 
 # -----------------------------------------------------
 # 3) Clean data and check variables
@@ -244,7 +241,6 @@ db <- db %>%
     relacion_laboral = relab
   )
 
-library(skimr)
 # skim the number of missing values
 db_miss <- skim(db) %>% select(skim_variable, n_missing)
 # view missing values as percentage
@@ -283,8 +279,50 @@ db <- db %>% filter(total_horas_trabajadas>0)
 # Keep only individuals 18 years and older
 db <- db %>% filter(age>18)
 
+# Descriptive Statistics
+# Hours Worked
+ggplot(db, aes(x = total_horas_trabajadas)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Histogram Total Hours Worked",
+       x = "Hours Worked",
+       y = "Frequency")
 
+# Total Income
+ggplot(db, aes(x = ingreso_total_mensual)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Histogram Total Income",
+       x = "Monthly Income",
+       y = "Frequency")
+# The distribution exhibits a long right tail, necessitating a logarithmic transformation
 
+# Age
+ggplot(db, aes(x = age)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Histogram Age",
+       x = "Age",
+       y = "Frequency")
+
+# Total Income / Hours Worked
+db <- db %>%
+  mutate(
+    ingreso_por_hora = ingreso_total_final / (total_horas_trabajadas * 4.33), # Multiplied by 4.33 to change from Weekly to Monthly
+    log_ingreso_por_hora = log(ingreso_por_hora)
+  )
+
+ggplot(db, aes(x = ingreso_por_hora)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Histogram Income by hour",
+       x = "Income by hour",
+       y = "Frequency")
+
+ggplot(db, aes(x = log_ingreso_por_hora)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Histogram log Income by hour",
+       x = "log Income by hour",
+       y = "Frequency")
+
+## Seleccionar variables de control y poner sus estadisticas descriptivas
+## Manejo de missing values de variables seleccionadas
 
 # -----------------------------------------------------
 # 4) Export the data to a .csv file
