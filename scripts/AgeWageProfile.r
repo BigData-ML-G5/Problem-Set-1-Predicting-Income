@@ -51,6 +51,9 @@ preds <- predict(model, newdata = data.frame(age = age_seq, age2 = age_seq^2))
 plot(db$age, log(db$ingreso_por_hora), pch = 16, col = rgb(0, 0, 0, 0.5), xlab = "Age", ylab = "Log(Hourly wage)")
 lines(age_seq, preds, col = "blue", lwd = 4)
 
+#Peak age
+peak_age <- -coef(model)[2] / (2 * coef(model)[3])
+
 ggplot(data = db, aes(x = age, y = log(ingreso_por_hora))) +
   geom_point(alpha = 0.3, color = "black", size = 1.5) +
   geom_line(data = data.frame(age = age_seq, age2 = age_seq^2), aes(x = age, y = preds), color = "blue", size = 1.2) +  # Línea ajustada
@@ -63,4 +66,11 @@ ggplot(data = db, aes(x = age, y = log(ingreso_por_hora))) +
   theme(
     plot.title = element_text(hjust = 0.5, face = "bold"),  
     axis.title = element_text(face = "bold")  
-  )
+  ) +
+  annotate("text", x = peak_age, y = max(preds), label = paste("Peak Age:", round(peak_age, 1)), vjust = -1, color = "red", size = 5)
+
+
+
+
+
+  
