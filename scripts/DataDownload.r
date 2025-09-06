@@ -302,9 +302,97 @@ db <- db %>%
 # 4.3) Statistics on variables to check for correlation
 # -----------------------------------------------------
 
-## Seleccionar variables de control y poner sus estadisticas descriptivas
-## Manejo de missing values de variables seleccionadas
+## association with outcome 
 
+yvar <- "ingreso_laboral_horas_actuales"
+controls <- c(
+  "age","estrato1","mes","formal",
+  "tamano_empresa","tamano_firma","maximo_nivel_educativo",
+  "tiene_segundo_trabajo","oficio"
+)
+
+# Keep only available variables
+vars_keep <- intersect(c(yvar, controls), names(db))
+d <- db[, vars_keep]
+
+# Binary controls
+bin_controls <- intersect(c("formal","tiene_segundo_trabajo"), names(d))
+
+# Helper: coerce binary factor/character/logical to 0/1
+to_01 <- function(x) {
+  if (is.logical(x)) return(as.integer(x))
+  if (is.factor(x))  return(as.integer(x) - 1L)           # level1=0, level2=1
+  if (is.character(x)) {
+    ux <- unique(na.omit(x))
+    if (length(ux) == 2) {
+      m <- setNames(c(0L,1L), ux)
+      return(unname(m[x]))
+    }
+  }
+  if (is.numeric(x)) return(x)                             # assume already 0/1 or numeric
+  return(x)
+}
+
+# Build unified association table:
+# - For numeric x: Pearson correlation and slope from y ~ x
+# - For binary x (0/1): same stats; slope = mean(1) - mean(0)
+assoc_y_controls <- bind_rows(lapply(intersect(controls, names(d)), function(v){
+  y <- d[[yvar]]
+  x <- d[[v]]
+  
+  # Coerce binaries to 0/1; leave others numeric
+  x2 <- if (v %in% bin_controls) to_01(x) else as.numeric(x)
+  
+  cc <- complete.cases(y, x2)
+  y  <- y[cc]; x2 <- x2[cc]
+  n  <- length(y)
+  
+  if (n < 5) {
+    return(data.frame(var = v, type = ifelse(v %in% bin_controls, "binary","numeric"),
+                      n = n, corr = NA_real_, slope = NA_real_, r2 = NA_real_, p = NA_real_))
+  }
+  
+  fit <- lm(y ~ x2)
+  sm  <- summary(fit)
+  
+  data.frame(
+    var   = v,
+    type  = ifelse(v %in% bin_controls, "binary", "numeric"),
+    n     = n,
+    corr  = suppressWarnings(cor(y, x2)),     # Pearson correlation
+    slope = unname(coef(fit)[2]),             # change in y per 1-unit in x (for binary: mean diff 1 vs 0)
+    r2    = sm$r.squared,
+    p     = sm$coefficients[2,4]
+  )
+})) %>% arrange(p)  # sort by p-value
+
+assoc_y_controls
+
+# Simple visualization: absolute correlation with the outcome
+assoc_y_corr_plot <- assoc_y_controls %>%
+  mutate(var = reorder(var, abs(corr))) %>%
+  ggplot(aes(x = var, y = abs(corr))) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Absolute correlation with the outcome",
+    x = "Control",
+    y = "|corr(y, x)|"
+  ) +
+  theme_minimal()
+
+assoc_y_corr_plot
+
+#Missings by control
+
+#oficio: 0,48
+#maximo_nivel_educativo: 0,11
+#tamano_empresa: 0,4815
+#tamano_firma: 0,4815
+#formal: 0,4815
+#tiene_segundo_trabajo: 0,4815
+
+## Manejo de missing values de variables seleccionadas
 
 # Check nulls amount for a specific variable
 
@@ -316,6 +404,7 @@ verify_nulls <- function(var_name) {
 }
 
 verify_nulls("ingreso_por_hora")
+
 
 # p6090 (afiliado a seguridad social), p6210 (nivel educativo max), p7040 (tenía otro trabajo?)
 # p7070 (cuánto recibió en ese 2ndo trabajo),
