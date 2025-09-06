@@ -306,9 +306,9 @@ db <- db %>%
 
 yvar <- "ingreso_laboral_horas_actuales"
 controls <- c(
-  "age","estrato1","mes","formal",
-  "tamano_empresa","tamano_firma","maximo_nivel_educativo",
-  "tiene_segundo_trabajo","oficio"
+  "age","estrato1","formal",
+  "tamano_empresa","maximo_nivel_educativo",
+  "tiempo_empresa_actual", "hoursWorkUsual"
 )
 
 # Keep only available variables
@@ -316,7 +316,7 @@ vars_keep <- intersect(c(yvar, controls), names(db))
 d <- db[, vars_keep]
 
 # Binary controls
-bin_controls <- intersect(c("formal","tiene_segundo_trabajo"), names(d))
+bin_controls <- intersect(c("formal"), names(d))
 
 # Helper: coerce binary factor/character/logical to 0/1
 to_01 <- function(x) {
@@ -383,14 +383,15 @@ assoc_y_corr_plot <- assoc_y_controls %>%
 
 assoc_y_corr_plot
 
-#Missings by control
+# % Missings by control
 
 #oficio: 0,48
 #maximo_nivel_educativo: 0,11
 #tamano_empresa: 0,4815
-#tamano_firma: 0,4815
 #formal: 0,4815
-#tiene_segundo_trabajo: 0,4815
+#age: 0
+#estrato1: 0,48
+#hoursWorkUsual: 0,48
 
 ## Manejo de missing values de variables seleccionadas
 
