@@ -1,0 +1,18 @@
+\begin{table}[!htbp]\centering
+\caption{Wage gap (Female). Dependent variable: log wage}\label{tab:wagegap}
+\begin{tabular}{lccc}
+\toprule
+ & (A) Unconditional OLS & (B) Conditional OLS (full) & (C) Conditional (FWL) \\
+\midrule
+Female & -0.076*** & -0.099*** & -0.099*** \\
+ & (0.011) & (0.008) & (0.010) \\
+\midrule
+N & 16356 & 16355 & 16355 \\
+R$^2$ & 0.003 & 0.613 & 0.613 \\
+FE & No & Yes & Yes \\
+\bottomrule
+\multicolumn{4}{l}{\footnotesize Notes: Column (B) includes worker/job controls (age, age$^2$, formal, estrato,} \\
+\multicolumn{4}{l}{\footnotesize firm size, max education, tenure, usual hours) and fixed effects for occupation and month.} \\
+\multicolumn{4}{l}{\footnotesize Column (C) reports the same estimate as (B) with nonparametric bootstrap SEs (R = 1000).} \\
+\end{tabular}
+\end{table}
