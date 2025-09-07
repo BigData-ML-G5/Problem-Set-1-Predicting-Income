@@ -162,24 +162,6 @@ db <- db %>%
     cotiza_pension = cotPension, relacion_laboral = relab
   )
 
-# skim the number of missing values
-db_miss <- skim(db) %>% select(skim_variable, n_missing)
-
-# view missing values as percentage
-nobs <- nrow(db) # number of observations
-db_miss<- db_miss %>% mutate(p_missing= n_missing/nobs) # new variable of number of NA
-db_miss <- db_miss %>% arrange(-n_missing) # descendant order
-db_miss<- db_miss %>% filter(n_missing!= 0) # keep only NA
-head(db_miss, 10) # Show the 10 first observations
-#Check if the 80% plus missing value columns are worth it or can be deleted
-
-## TODO: FALTA REVISAR
-# TODO: Las que sean categóricas +2 categorías transformar as.factor
-
-#delete those variables with more than 80% of missing values
-db_clean <- db %>% select(-all_of(db_miss$skim_variable[db_miss$p_missing > 0.8]))
-names(db_clean)
-
 # Create a variable number of minors
 # TODO: 1) está cambiando datos sobre db, no db_clean
 # TODO: 2) quitar positive_hours_worked quita N/A, quedan 9783
@@ -207,11 +189,181 @@ db <- db %>% filter(age>18)
 # Create age squared
 db <- db %>% mutate(age2 = age*age)
 
+# skim the number of missing values
+db_miss <- skim(db) %>% select(skim_variable, n_missing)
+
+# view missing values as percentage
+nobs <- nrow(db) # number of observations
+db_miss<- db_miss %>% mutate(p_missing= n_missing/nobs) # new variable of number of NA
+db_miss <- db_miss %>% arrange(-n_missing) # descendant order
+db_miss<- db_miss %>% filter(n_missing!= 0) # keep only NA
+head(db_miss, 10) # Show the 10 first observations
+#Check if the 80% plus missing value columns are worth it or can be deleted
+
+## TODO: FALTA REVISAR
+# TODO: Las que sean categóricas +2 categorías transformar as.factor
+
+#delete those variables with more than 80% of missing values
+db_clean <- db %>% select(-all_of(db_miss$skim_variable[db_miss$p_missing > 0.8]))
+names(db_clean)
+
+db <- db %>%
+  select(
+    num_minors, 
+    hombre, 
+    num_minors, 
+    bin_head, 
+    age, 
+    bin_headFemale, 
+    age2, 
+    estrato1,
+    maximo_nivel_educativo,
+    tamano_empresa,
+    tiempo_empresa_actual,
+    formal,
+    hoursWorkUsual,
+    ingreso_laboral_horas_actuales
+  )
+
 #TODO: están quedndo 19k / 36k, no sé si esté bien
 
 # -----------------------------------------------------
 # 4) Descriptive statistics
 # -----------------------------------------------------
+# Controlled variable = estrato1 - maximo_nivel_educativo - tamano_empresa - tiempo_empresa_actual - 
+# formal - age - hoursWorkUsual,ingreso_laboral_horas_actuales = Base labor income excluding bonuses, 
+# allowances, and subsidies
+
+## TODO: Una vez ingreso no tenga missing values, eliminar la linea de codigo de ingreso > 0 y que no contenga NA
+
+# Mean by socioeconomic level (1 to 6)
+mean_se_level <- db %>%
+  filter(!is.na(ingreso_laboral_horas_actuales), 
+         ingreso_laboral_horas_actuales > 0,
+         estrato1 %in% 1:6) %>%
+  group_by(estrato1) %>%
+  summarise(media = mean(ingreso_laboral_horas_actuales))
+
+ggplot(mean_se_level, aes(x = factor(estrato1), y = media)) +
+  geom_col(fill = "steelblue") + geom_text(aes(label = round(media, 0)), vjust = -0.5) +
+  labs(title = "Mean Income by Socioeconomic Level",
+       x = "Socioeconomic Level",
+       y = "Mean Income by Hour")
+  theme_minimal()
+
+# Mean by education level (1 to 7)
+mean_educ_level <- db %>%
+  filter(!is.na(ingreso_laboral_horas_actuales), 
+         ingreso_laboral_horas_actuales > 0,
+         estrato1 %in% 1:6) %>%
+  group_by(maximo_nivel_educativo) %>%
+  summarise(media = mean(ingreso_laboral_horas_actuales))
+
+ggplot(mean_educ_level, aes(x = factor(maximo_nivel_educativo), y = media)) +
+  geom_col(fill = "steelblue") + geom_text(aes(label = round(media, 0)), vjust = -0.5) +
+  labs(title = "Mean Hourly Income by Education Level",
+       x = "Education Level",
+       y = "Mean Income by Hour")
+theme_minimal()
+
+# Company Size
+mean_tamano_empresa <- db %>%
+  filter(!is.na(ingreso_laboral_horas_actuales), 
+         ingreso_laboral_horas_actuales > 0,
+         !is.na(tamano_empresa)) %>%
+  group_by(tamano_empresa) %>%
+  summarise(media = mean(ingreso_laboral_horas_actuales))
+
+ggplot(mean_tamano_empresa, aes(x = factor(tamano_empresa), y = media)) +
+  geom_col(fill = "steelblue") + 
+  geom_text(aes(label = round(media, 0)), vjust = -0.5) +
+  labs(title = "Mean Hourly Income by Company Size",
+       x = "Company Size",
+       y = "Mean Income by Hour") +
+  theme_minimal()
+
+# Time in current company
+mean_tiempo_empresa <- db %>%
+  filter(!is.na(ingreso_laboral_horas_actuales), 
+         ingreso_laboral_horas_actuales > 0,
+         !is.na(tiempo_empresa_actual)) %>%
+  mutate(tiempo_grupo = case_when(
+    tiempo_empresa_actual < 1 ~ "< 1 year",
+    tiempo_empresa_actual >= 1 & tiempo_empresa_actual < 3 ~ "1-3 years",
+    tiempo_empresa_actual >= 3 & tiempo_empresa_actual < 5 ~ "3-5 years",
+    tiempo_empresa_actual >= 5 ~ "5+ years"
+  )) %>%
+  group_by(tiempo_grupo) %>%
+  summarise(media = mean(ingreso_laboral_horas_actuales))
+
+ggplot(mean_tiempo_empresa, aes(x = factor(tiempo_grupo), y = media)) +
+  geom_col(fill = "steelblue") + 
+  geom_text(aes(label = round(media, 0)), vjust = -0.5) +
+  labs(title = "Mean Hourly Income by Time in Current Company",
+       x = "Time in Company",
+       y = "Mean Income by Hour") +
+  theme_minimal()
+
+# Formal or informal employment type
+mean_formal <- db %>%
+  filter(!is.na(ingreso_laboral_horas_actuales), 
+         ingreso_laboral_horas_actuales > 0,
+         !is.na(formal)) %>%
+  group_by(formal) %>%
+  summarise(media = mean(ingreso_laboral_horas_actuales))
+
+ggplot(mean_formal, aes(x = factor(formal, labels = c("Informal", "Formal")), y = media)) +
+  geom_col(fill = "steelblue") + 
+  geom_text(aes(label = round(media, 0)), vjust = -0.5) +
+  labs(title = "Mean Hourly Income by Employment Type",
+       x = "Employment Type",
+       y = "Mean Income by Hour") +
+  theme_minimal()
+
+# Age
+mean_age <- db %>%
+  filter(!is.na(ingreso_laboral_horas_actuales), 
+         ingreso_laboral_horas_actuales > 0,
+         !is.na(age)) %>%
+  mutate(age_grupo = case_when(
+    age < 25 ~ "18-24",
+    age >= 25 & age < 35 ~ "25-34",
+    age >= 35 & age < 45 ~ "35-44",
+    age >= 45 & age < 55 ~ "45-54",
+    age >= 55 ~ "55+"
+  )) %>%
+  group_by(age_grupo) %>%
+  summarise(media = mean(ingreso_laboral_horas_actuales))
+
+ggplot(mean_age, aes(x = factor(age_grupo), y = media)) +
+  geom_col(fill = "steelblue") + 
+  geom_text(aes(label = round(media, 0)), vjust = -0.5) +
+  labs(title = "Mean Hourly Income by Age Group",
+       x = "Age Group",
+       y = "Mean Income by Hour") +
+  theme_minimal()
+
+# 5. Horas trabajo habituales (agrupadas en rangos)
+mean_hours <- db %>%
+  filter(!is.na(ingreso_laboral_horas_actuales), 
+         ingreso_laboral_horas_actuales > 0,
+         !is.na(hoursWorkUsual)) %>%
+  mutate(hours_grupo = case_when(
+    hoursWorkUsual < 20 ~ "Part-time (<20h)",
+    hoursWorkUsual >= 20 & hoursWorkUsual < 40 ~ "Part-time (20-39h)",
+    hoursWorkUsual >= 40 & hoursWorkUsual <= 48 ~ "Full-time (40-48h)",
+    hoursWorkUsual > 48 ~ "Overtime (>48h)"
+  )) %>%
+  group_by(hours_grupo) %>%
+  summarise(media = mean(ingreso_laboral_horas_actuales))
+
+ggplot(mean_hours, aes(x = factor(hours_grupo), y = media)) +
+  geom_col(fill = "steelblue") + 
+  geom_text(aes(label = round(media, 0)), vjust = -0.5) +
+  labs(title = "Mean Hourly Income by Work Hours Category",
+       x = "Work Hours Category",
+       y = "Mean Income by Hour") +
+  theme_minimal()
 
 # -----------------------------------------------------
 # 4.1) Check variables distributions (histograms)
@@ -228,12 +380,7 @@ ggplot(db, aes(x = ingreso_total_mensual)) +
 
 # Total Income / Hours Worked
 db <- db %>%
-  mutate(
-    # Adjust total_wage so no number is 0
-    # Multiplied by 4.33 to change from Weekly to Monthly
-    ingreso_por_hora = ifelse(ingreso_total_final == 0, 1, ingreso_total_final / (total_horas_trabajadas * 4.33)),
-    log_ingreso_por_hora = log(ingreso_por_hora)
-  )
+  mutate(log_ingreso_laboral_horas_actuales = log(ingreso_laboral_horas_actuales))
 
 ggplot(db, aes(x = ingreso_por_hora)) +
   geom_histogram(bins = 30) +
@@ -390,13 +537,12 @@ assoc_y_corr_plot
 #tamano_empresa: 0,4815
 #formal: 0,4815
 #age: 0
-#estrato1: 0,48
+#estrato1: 0
 #hoursWorkUsual: 0,48
 
 ## Manejo de missing values de variables seleccionadas
 
 # Check nulls amount for a specific variable
-
 
 cols <- colnames(db)
 
@@ -405,7 +551,6 @@ verify_nulls <- function(var_name) {
 }
 
 verify_nulls("ingreso_por_hora")
-
 
 # p6090 (afiliado a seguridad social), p6210 (nivel educativo max), p7040 (tenía otro trabajo?)
 # p7070 (cuánto recibió en ese 2ndo trabajo),
