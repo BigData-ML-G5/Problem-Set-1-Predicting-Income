@@ -183,7 +183,7 @@ db <- db %>% mutate(bin_headFemale = bin_head*(1-hombre))
 db <- db %>% mutate(age2 = age*age)
 
 # Check the missing values with the correct filters
-db_clean <- db %>% filter(total_horas_trabajadas>0) %>% filter(age>18)
+db_clean <- db %>% filter(total_horas_trabajadas>0) %>% filter(age>17)
 
 # skim the number of missing values
 db_miss <- skim(db_clean) %>% select(skim_variable, n_missing)
@@ -199,7 +199,7 @@ head(db_miss, 10) # Show the 10 first observations
 # TODO: Las que sean categóricas +2 categorías transformar as.factor
 
 # Apply filters to the first base
-db <- db %>% filter(total_horas_trabajadas>0) %>% filter(age>18)
+db <- db %>% filter(total_horas_trabajadas>0) %>% filter(age>17)
 
 # Delete those variables with more than 80% of missing values
 # This db is only for code developing purposes; helping the team understand the data,
