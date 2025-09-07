@@ -86,8 +86,8 @@ ggplot(data = db, aes(x = age, y = log_ingreso_laboral_horas_actuales)) +
 
 # Export graph to "views"
 name <- "Age-Wage profile"
-link <- past0("views/", name, ".png")
-ggsave(link, plot = last_plot(), width = 8, height = 6)
+link <- paste0("views/", name, ".png")
+ggsave(link, plot = last_plot(), width = 8, height = 6)
 
 
 
