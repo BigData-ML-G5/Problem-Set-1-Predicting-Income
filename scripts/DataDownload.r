@@ -20,7 +20,7 @@
 rm(list = ls())
 
 require(pacman)
-p_load(rvest, dplyr, tidyr, readr, httr, jsonlite, boot, lfe, ggplot2, skimr)
+p_load(rvest, dplyr, tidyr, readr, httr, jsonlite, boot, lfe, ggplot2, skimr, gridExtra, cowplot)
 
 # -----------------------------------------------------
 # 1) Web scraping to access the page
@@ -179,17 +179,14 @@ db <- db %>% mutate(bin_head = ifelse(test = parentesco_jefe_hogar == 1, yes = 1
 # Create a variable to identify if the household head is female
 db <- db %>% mutate(bin_headFemale = bin_head*(1-hombre))
 
-# Keep data with positive hours worked
-db <- db %>% filter(total_horas_trabajadas>0)
-
-# Keep only individuals 18 years and older
-db <- db %>% filter(age>18)
-
 # Create age squared
 db <- db %>% mutate(age2 = age*age)
 
+# Check the missing values with the correct filters
+db_clean <- db %>% filter(total_horas_trabajadas>0) %>% filter(age>18)
+
 # skim the number of missing values
-db_miss <- skim(db) %>% select(skim_variable, n_missing)
+db_miss <- skim(db_clean) %>% select(skim_variable, n_missing)
 
 # view missing values as percentage
 nobs <- nrow(db) # number of observations
@@ -197,6 +194,29 @@ db_miss<- db_miss %>% mutate(p_missing= n_missing/nobs) # new variable of number
 db_miss <- db_miss %>% arrange(-n_missing) # descendant order
 db_miss<- db_miss %>% filter(n_missing!= 0) # keep only NA
 head(db_miss, 10) # Show the 10 first observations
+
+## TODO: FALTA REVISAR
+# TODO: Las que sean categóricas +2 categorías transformar as.factor
+
+# Apply filters to the first base
+db <- db %>% filter(total_horas_trabajadas>0) %>% filter(age>18)
+
+db <- db %>%
+  select(
+    num_minors, 
+    hombre, 
+    bin_head, 
+    age, 
+    bin_headFemale, 
+    age2, 
+    estrato1,
+    maximo_nivel_educativo,
+    tamano_empresa,
+    tiempo_empresa_actual,
+    formal,
+    hoursWorkUsual,
+    ingreso_laboral_horas_actuales
+  )
 
 # Delete those variables with more than 80% of missing values
 # This db is only for code developing purposes; helping the team understand the data,
@@ -223,12 +243,14 @@ db <- db %>%
 # -----------------------------------------------------
 # 4.1) Descriptive statistics
 # -----------------------------------------------------
+# Controlled variables = estrato1 - maximo_nivel_educativo - tamano_empresa - tiempo_empresa_actual - 
+# formal - age - hoursWorkUsual, num_minors, hombre, bin_head, bin_head_Female
 # Independent variable - ingreso_laboral_horas_actuales = Base labor income excluding bonuses, 
 # allowances, and subsidies
 # Controlled variables = estrato1 - maximo_nivel_educativo - tamano_empresa - tiempo_empresa_actual - 
 # formal - age - hoursWorkUsual
 
-## TODO: Una vez ingreso no tenga missing values, eliminar la linea de codigo de ingreso > 0 y que no contenga NA
+# ingreso_laboral_horas_actuales = Base labor income excluding bonuses, allowances, and subsidies
 
 ### FOR GRAPH EXPORTS TO WORK, SET WORKING DIRECTORY TO THE MAIN FOLDER OF THE
 ### PROJECT, NAMED "Problem-Set-1-Predicting-Income"
@@ -241,11 +263,12 @@ mean_se_level <- db %>%
   group_by(estrato1) %>%
   summarise(media = mean(ingreso_laboral_horas_actuales))
 
-ggplot(mean_se_level, aes(x = factor(estrato1), y = media)) +
-  geom_col(fill = "steelblue") + geom_text(aes(label = round(media, 0)), vjust = -0.5) +
-  labs(title = "Mean Income by Socioeconomic Level",
+p1 <- ggplot(mean_se_level, aes(x = factor(estrato1), y = media)) +
+  geom_col(fill = "steelblue") + 
+  geom_text(aes(label = round(media, 0)), vjust = -0.5) +
+  labs(title = "Mean Hourly Income by Socioeconomic Level (COP)",
        x = "Socioeconomic Level",
-       y = "Mean Income by Hour")
+       y = "Mean Income by Hour") +
   theme_minimal()
 
 # Export graph to "views"
@@ -262,12 +285,13 @@ mean_educ_level <- db %>%
   group_by(maximo_nivel_educativo) %>%
   summarise(media = mean(ingreso_laboral_horas_actuales))
 
-ggplot(mean_educ_level, aes(x = factor(maximo_nivel_educativo), y = media)) +
-  geom_col(fill = "steelblue") + geom_text(aes(label = round(media, 0)), vjust = -0.5) +
-  labs(title = "Mean Hourly Income by Education Level",
+p2 <- ggplot(mean_educ_level, aes(x = factor(maximo_nivel_educativo), y = media)) +
+  geom_col(fill = "steelblue") + 
+  geom_text(aes(label = round(media, 0)), vjust = -0.5) +
+  labs(title = "Mean Hourly Income by Education Level (COP)",
        x = "Education Level",
-       y = "Mean Income by Hour")
-theme_minimal()
+       y = "Mean Income by Hour") +
+  theme_minimal()
 
 # Company Size
 mean_tamano_empresa <- db %>%
@@ -277,10 +301,10 @@ mean_tamano_empresa <- db %>%
   group_by(tamano_empresa) %>%
   summarise(media = mean(ingreso_laboral_horas_actuales))
 
-ggplot(mean_tamano_empresa, aes(x = factor(tamano_empresa), y = media)) +
+p3 <- ggplot(mean_tamano_empresa, aes(x = factor(tamano_empresa), y = media)) +
   geom_col(fill = "steelblue") + 
   geom_text(aes(label = round(media, 0)), vjust = -0.5) +
-  labs(title = "Mean Hourly Income by Company Size",
+  labs(title = "Mean Hourly Income by Company Size (COP)",
        x = "Company Size",
        y = "Mean Income by Hour") +
   theme_minimal()
@@ -299,10 +323,10 @@ mean_tiempo_empresa <- db %>%
   group_by(tiempo_grupo) %>%
   summarise(media = mean(ingreso_laboral_horas_actuales))
 
-ggplot(mean_tiempo_empresa, aes(x = factor(tiempo_grupo), y = media)) +
+p4 <- ggplot(mean_tiempo_empresa, aes(x = factor(tiempo_grupo), y = media)) +
   geom_col(fill = "steelblue") + 
   geom_text(aes(label = round(media, 0)), vjust = -0.5) +
-  labs(title = "Mean Hourly Income by Time in Current Company",
+  labs(title = "Mean Hourly Income by Time in Current Company (COP)",
        x = "Time in Company",
        y = "Mean Income by Hour") +
   theme_minimal()
@@ -315,10 +339,10 @@ mean_formal <- db %>%
   group_by(formal) %>%
   summarise(media = mean(ingreso_laboral_horas_actuales))
 
-ggplot(mean_formal, aes(x = factor(formal, labels = c("Informal", "Formal")), y = media)) +
+p5 <- ggplot(mean_formal, aes(x = factor(formal, labels = c("Informal", "Formal")), y = media)) +
   geom_col(fill = "steelblue") + 
   geom_text(aes(label = round(media, 0)), vjust = -0.5) +
-  labs(title = "Mean Hourly Income by Employment Type",
+  labs(title = "Mean Hourly Income by Employment Type (COP)",
        x = "Employment Type",
        y = "Mean Income by Hour") +
   theme_minimal()
@@ -338,35 +362,52 @@ mean_age <- db %>%
   group_by(age_grupo) %>%
   summarise(media = mean(ingreso_laboral_horas_actuales))
 
-ggplot(mean_age, aes(x = factor(age_grupo), y = media)) +
+p6 <- ggplot(mean_age, aes(x = factor(age_grupo), y = media)) +
   geom_col(fill = "steelblue") + 
   geom_text(aes(label = round(media, 0)), vjust = -0.5) +
-  labs(title = "Mean Hourly Income by Age Group",
+  labs(title = "Mean Hourly Income by Age Group (COP)",
        x = "Age Group",
        y = "Mean Income by Hour") +
   theme_minimal()
 
-# 5. Horas trabajo habituales (agrupadas en rangos)
-mean_hours <- db %>%
+# Mean by gender (hombre: 1=male, 0=female)
+mean_hombre <- db %>%
   filter(!is.na(ingreso_laboral_horas_actuales), 
-         ingreso_laboral_horas_actuales > 0,
-         !is.na(hoursWorkUsual)) %>%
-  mutate(hours_grupo = case_when(
-    hoursWorkUsual < 20 ~ "Part-time (<20h)",
-    hoursWorkUsual >= 20 & hoursWorkUsual < 40 ~ "Part-time (20-39h)",
-    hoursWorkUsual >= 40 & hoursWorkUsual <= 48 ~ "Full-time (40-48h)",
-    hoursWorkUsual > 48 ~ "Overtime (>48h)"
-  )) %>%
-  group_by(hours_grupo) %>%
+         ingreso_laboral_horas_actuales > 0) %>%
+  group_by(hombre) %>%
   summarise(media = mean(ingreso_laboral_horas_actuales))
 
-ggplot(mean_hours, aes(x = factor(hours_grupo), y = media)) +
+p7 <- ggplot(mean_hombre, aes(x = factor(hombre, labels = c("Female", "Male")), y = media)) +
   geom_col(fill = "steelblue") + 
   geom_text(aes(label = round(media, 0)), vjust = -0.5) +
-  labs(title = "Mean Hourly Income by Work Hours Category",
-       x = "Work Hours Category",
+  labs(title = "Mean Hourly Income by Gender (COP)",
+       x = "Gender",
        y = "Mean Income by Hour") +
   theme_minimal()
+
+# Mean by household head status
+mean_bin_head <- db %>%
+  filter(!is.na(ingreso_laboral_horas_actuales), 
+         ingreso_laboral_horas_actuales > 0) %>%
+  group_by(bin_head) %>%
+  summarise(media = mean(ingreso_laboral_horas_actuales))
+
+p8 <- ggplot(mean_bin_head, aes(x = factor(bin_head, labels = c("Not Head", "Head")), y = media)) +
+  geom_col(fill = "steelblue") + 
+  geom_text(aes(label = round(media, 0)), vjust = -0.5) +
+  labs(title = "Mean Hourly Income by Household Head Status (COP)",
+       x = "Household Head",
+       y = "Mean Income by Hour") +
+  theme_minimal()
+
+# Combine all income analysis plots
+combined_income_plots <- grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, 
+                                      ncol = 3, nrow = 3)
+
+# Save income analysis plots
+setwd("/Users/gianlucacicco/Desktop/Taller 1 - BigData/Problem-Set-1-Predicting-Income/views")
+ggsave("views/income_analysis_by_variables.jpg", combined_income_plots, 
+       width = 15, height = 12, dpi = 300)
 
 # -----------------------------------------------------
 # 4.2) Check variables distributions (histograms)
@@ -387,28 +428,126 @@ ggplot(db, aes(x = ingreso_por_hora)) +
        x = "Income by hour",
        y = "Frequency")
 
-ggplot(db, aes(x = log_ingreso_por_hora)) +
-  geom_histogram(bins = 30) +
-  labs(title = "Histogram log Income by hour",
-       x = "log Income by hour",
-       y = "Frequency")
+# Create distribution plots
+# 1. Number of minors - Categorical
+d1 <- ggplot(db, aes(x = factor(num_minors))) +
+  geom_bar() +
+  geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) +
+  labs(title = "Distribution of Number of Minors",
+       x = "Number of Minors",
+       y = "Frequency") +
+  theme_minimal()
 
-# Hours Worked
-# TODO: put unites to title
-# TODO: no me parece tan bien distribuida; sqrt funciona mejor, pero no convence
-ggplot(db, aes(x = total_horas_trabajadas)) +
-  geom_histogram(bins = 30) +
-  labs(title = "Histogram Total Hours Worked",
-       x = "Hours Worked",
-       y = "Frequency")
+# 2. Gender (hombre) - Categorical
+d2 <- ggplot(db, aes(x = factor(hombre, labels = c("Female", "Male")))) +
+  geom_bar() +
+  geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) +
+  labs(title = "Distribution of Gender",
+       x = "Gender",
+       y = "Frequency") +
+  theme_minimal()
 
-# Age
-# TODO: no sé si la necesitamos realmente
-ggplot(db, aes(x = age)) +
+# 3. Household head - Categorical
+d3 <- ggplot(db, aes(x = factor(bin_head, labels = c("Not Head", "Head")))) +
+  geom_bar() +
+  geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) +
+  labs(title = "Distribution of Household Head",
+       x = "Household Head Status",
+       y = "Frequency") +
+  theme_minimal()
+
+# 4. Age - Continuous
+d4 <- ggplot(db, aes(x = age)) +
   geom_histogram(bins = 30) +
   labs(title = "Histogram Age",
-       x = "Age",
-       y = "Frequency")
+       x = "Age (years)",
+       y = "Frequency") +
+  theme_minimal()
+
+# 5. Female household head - Categorical
+d5 <- ggplot(db, aes(x = factor(bin_headFemale, labels = c("Not Female Head", "Female Head")))) +
+  geom_bar() +
+  geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) +
+  labs(title = "Distribution of Female Household Head",
+       x = "Female Household Head Status",
+       y = "Frequency") +
+  theme_minimal()
+
+# 6. Age squared - Continuous
+d6 <- ggplot(db, aes(x = age2)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Histogram Age Squared",
+       x = "Age Squared",
+       y = "Frequency") +
+  theme_minimal()
+
+# 7. Socioeconomic level - Categorical
+d7 <- ggplot(db, aes(x = factor(estrato1))) +
+  geom_bar() +
+  geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) +
+  labs(title = "Distribution of Socioeconomic Level",
+       x = "Socioeconomic Level (1-6)",
+       y = "Frequency") +
+  theme_minimal()
+
+# 8. Education level - Categorical
+d8 <- ggplot(db, aes(x = factor(maximo_nivel_educativo))) +
+  geom_bar() +
+  geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) +
+  labs(title = "Distribution of Education Level",
+       x = "Maximum Education Level",
+       y = "Frequency") +
+  theme_minimal()
+
+# 9. Company size - Categorical
+d9 <- ggplot(db, aes(x = factor(tamano_empresa))) +
+  geom_bar() +
+  geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) +
+  labs(title = "Distribution of Company Size",
+       x = "Company Size",
+       y = "Frequency") +
+  theme_minimal()
+
+# 10. Time in current company - Continuous
+d10 <- ggplot(db, aes(x = tiempo_empresa_actual)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Histogram Time in Current Company",
+       x = "Time in Company (years)",
+       y = "Frequency") +
+  theme_minimal()
+
+# 11. Formal employment - Categorical
+d11 <- ggplot(db, aes(x = factor(formal, labels = c("Informal", "Formal")))) +
+  geom_bar() +
+  geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) +
+  labs(title = "Distribution of Employment Type",
+       x = "Employment Type",
+       y = "Frequency") +
+  theme_minimal()
+
+# 12. Usual work hours - Continuous
+d12 <- ggplot(db, aes(x = hoursWorkUsual)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Histogram Usual Work Hours",
+       x = "Usual Work Hours per Week",
+       y = "Frequency") +
+  theme_minimal()
+
+# 13. Hourly labor income - Continuous
+d13 <- ggplot(db, aes(x = ingreso_laboral_horas_actuales)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Histogram Hourly Labor Income (COP)",
+       x = "Hourly Income (COP)",
+       y = "Frequency") +
+  theme_minimal()
+
+# Combine all distribution plots (4x4 grid to fit all 13)
+combined_distributions <- grid.arrange(d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13,
+                                       ncol = 4, nrow = 4)
+
+# Save distribution plots using relative path
+ggsave("views/variable_distributions.jpg", combined_distributions, 
+       width = 16, height = 16, dpi = 300)
 
 # -----------------------------------------------------
 # 4.3) Statistics on variables to check for correlation
