@@ -277,7 +277,13 @@ b_peak_women <- boot::boot(women, statistic = peak_fun, R = 1000)
 ci_peak_men   <- boot::boot.ci(b_peak_men,   type = "perc", index = 1)$perc[4:5]
 ci_peak_women <- boot::boot.ci(b_peak_women, type = "perc", index = 1)$perc[4:5]
 
-# ---- Peak ages table (Women / Men) and export to LaTeX ----
+#Difference in peak ages
+diff_draws <- as.numeric(b_peak_men$t) - as.numeric(b_peak_women$t)
+est_diff   <- as.numeric(peak_men - peak_women)
+ci_diff    <- quantile(diff_draws, c(0.025, 0.975), na.rm = TRUE)
+
+# Peak ages table (Women / Men) and export to LaTeX 
+
 peak_tab <- data.frame(
   gender   = c("Women","Men"),
   peak_age = c(peak_women, peak_men),
@@ -287,6 +293,7 @@ peak_tab <- data.frame(
 
 fmt1 <- function(x) formatC(x, format = "f", digits = 1)
 if (!dir.exists("views")) dir.create("views", recursive = TRUE)
+
 tex <- c(
   "\\begin{table}[!htbp]",
   "\\centering",
@@ -297,13 +304,17 @@ tex <- c(
   "\\midrule",
   paste0("Women & ", fmt1(peak_tab$peak_age[1]), " & ", fmt1(peak_tab$CI_low[1]), " & ", fmt1(peak_tab$CI_high[1]), " \\\\"),
   paste0("Men & ",    fmt1(peak_tab$peak_age[2]), " & ", fmt1(peak_tab$CI_low[2]), " & ", fmt1(peak_tab$CI_high[2]), " \\\\"),
+  "\\midrule",
+  paste0("Men $-$ Women & ", fmt1(est_diff), " & ", fmt1(ci_diff[1]), " & ", fmt1(ci_diff[2]), " \\\\"),
   "\\bottomrule",
   "\\end{tabular}",
   "\\begin{flushleft}\\footnotesize",
-  "Notes: Peaks from quadratic log-wage models by gender. CIs are nonparametric percentile bootstrap ($R=1000$).",
+  "Notes: Peaks from quadratic log-wage models by gender. CIs are nonparametric percentile bootstrap ($R=1000$). ",
+  "Positive values in the difference row indicate that men's peak age is higher than women's.",
   "\\end{flushleft}",
   "\\end{table}"
 )
+
 writeLines(tex, "views/table_peak_ages.tex")
 
 # -----------------------------------------------------
