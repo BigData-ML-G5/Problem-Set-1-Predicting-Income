@@ -183,7 +183,7 @@ db <- db %>% mutate(bin_headFemale = bin_head*(1-hombre))
 db <- db %>% mutate(age2 = age*age)
 
 # Check the missing values with the correct filters
-db_clean <- db %>% filter(total_horas_trabajadas>0) %>% filter(age>18)
+db_clean <- db %>% filter(total_horas_trabajadas>0) %>% filter(age>17)
 
 # skim the number of missing values
 db_miss <- skim(db_clean) %>% select(skim_variable, n_missing)
@@ -199,24 +199,7 @@ head(db_miss, 10) # Show the 10 first observations
 # TODO: Las que sean categóricas +2 categorías transformar as.factor
 
 # Apply filters to the first base
-db <- db %>% filter(total_horas_trabajadas>0) %>% filter(age>18)
-
-db <- db %>%
-  select(
-    num_minors, 
-    hombre, 
-    bin_head, 
-    age, 
-    bin_headFemale, 
-    age2, 
-    estrato1,
-    maximo_nivel_educativo,
-    tamano_empresa,
-    tiempo_empresa_actual,
-    formal,
-    hoursWorkUsual,
-    ingreso_laboral_horas_actuales
-  )
+db <- db %>% filter(total_horas_trabajadas>0) %>% filter(age>17)
 
 # Delete those variables with more than 80% of missing values
 # This db is only for code developing purposes; helping the team understand the data,
@@ -228,7 +211,7 @@ db <- db %>%
   select(num_minors, hombre, num_minors, bin_head,age, bin_headFemale, 
     age2, estrato1,maximo_nivel_educativo, tamano_empresa,
     tiempo_empresa_actual,formal,hoursWorkUsual,
-    ingreso_laboral_horas_actuales, oficio
+    ingreso_laboral_horas_actuales, oficio, mes
   )
 
 # Apply factor to categorics
@@ -239,18 +222,13 @@ db <- db %>%
   mutate(oficio = as.factor(oficio)) %>%
   mutate(log_ingreso_laboral_horas_actuales = log(ingreso_laboral_horas_actuales))
 
-
 # -----------------------------------------------------
 # 4.1) Descriptive statistics
 # -----------------------------------------------------
 # Controlled variables = estrato1 - maximo_nivel_educativo - tamano_empresa - tiempo_empresa_actual - 
-# formal - age - hoursWorkUsual, num_minors, hombre, bin_head, bin_head_Female
+# formal - age - hoursWorkUsual - num_minors - hombre - bin_head - bin_head_Female
 # Independent variable - ingreso_laboral_horas_actuales = Base labor income excluding bonuses, 
 # allowances, and subsidies
-# Controlled variables = estrato1 - maximo_nivel_educativo - tamano_empresa - tiempo_empresa_actual - 
-# formal - age - hoursWorkUsual
-
-# ingreso_laboral_horas_actuales = Base labor income excluding bonuses, allowances, and subsidies
 
 ### FOR GRAPH EXPORTS TO WORK, SET WORKING DIRECTORY TO THE MAIN FOLDER OF THE
 ### PROJECT, NAMED "Problem-Set-1-Predicting-Income"
@@ -270,12 +248,6 @@ p1 <- ggplot(mean_se_level, aes(x = factor(estrato1), y = media)) +
        x = "Socioeconomic Level",
        y = "Mean Income by Hour") +
   theme_minimal()
-
-# Export graph to "views"
-name <- "mean_income by socioeconomic level"
-link <- past0("views/", name, ".png")
-ggsave(link, plot = last_plot(), width = 8, height = 6)
-
 
 # Mean by education level (1 to 7)
 mean_educ_level <- db %>%
@@ -412,21 +384,6 @@ ggsave("views/income_analysis_by_variables.jpg", combined_income_plots,
 # -----------------------------------------------------
 # 4.2) Check variables distributions (histograms)
 # -----------------------------------------------------
-
-# Total Income
-# TODO: put units to title
-ggplot(db, aes(x = ingreso_total_mensual)) +
-  geom_histogram(bins = 30) +
-  labs(title = "Histogram Total Income",
-       x = "Monthly Income",
-       y = "Frequency")
-
-# Total Income / Hours Worked
-ggplot(db, aes(x = ingreso_por_hora)) +
-  geom_histogram(bins = 30) +
-  labs(title = "Histogram Income by hour",
-       x = "Income by hour",
-       y = "Frequency")
 
 # Create distribution plots
 # 1. Number of minors - Categorical
@@ -697,3 +654,4 @@ db <- db %>%
 # Eliminate few missing values that have no close age & job group
 db <- db %>% filter(!is.na(ingreso_laboral_horas_actuales))
 
+write.csv(db, "db_ready.csv", row.names = FALSE)
