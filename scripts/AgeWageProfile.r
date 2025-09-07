@@ -56,42 +56,27 @@ peak_y <- predict(model, newdata = data.frame(age = peak_age, age2 = peak_age^2)
 peak_data <- data.frame(age = peak_age, y = peak_y)
 
 ggplot(data = db, aes(x = age, y = log_ingreso_laboral_horas_actuales)) +
-  # puntos de la muestra (sin leyenda)
   geom_point(alpha = 0.3, color = "black", size = 1.5) +
-  
-  # curva ajustada
-  geom_line(
-    data = curve_data,
-    aes(x = age, y = preds, linetype = "Fitted curve"),  # <--- usamos linetype como key
-    color = "blue", size = 1.2
+  geom_line(data = curve_data, aes(x = age, y = preds, color = "Fitted curve"), size = 1.2) +
+  geom_point(data = peak_data, aes(x = age, y = y, color = "Peak age", shape = "Peak age"), size = 5) +
+  scale_color_manual(
+    name = "Legend",
+    values = c("Fitted curve" = "blue", "Peak age" = "red"),
+    labels = c("Fitted curve", "Peak age")
   ) +
-  
-  # punto de máximo (misma key para color y shape)
-  geom_point(
-    data = peak_data,
-    aes(x = age, y = y, color = "Peak age", shape = "Peak age"),
-    size = 5
+  scale_shape_manual(
+    name = "",
+    values = c("Peak" = 16),
+    labels = c("Peak")
   ) +
-  
-  scale_color_manual(values = c("Peak age" = "red")) +
-  scale_shape_manual(values = c("Peak age" = 16)) +
-  scale_linetype_manual(values = c("Fitted curve" = "solid")) +
-  
-  guides(
-    color = guide_legend(order = 1),
-    shape = guide_legend(order = 1),
-    linetype = guide_legend(order = 2)
-  ) +
-  
-  annotate("text", x = peak_age, y = peak_y, 
-           label = paste0("Peak age: ", round(peak_age, 1)), 
-           vjust = -1, color = "red", fontface = "bold", size = 5) +
-  
+  annotate("text", x = peak_age, y = peak_y, label = paste0("Peak age: ", round(peak_age, 1)), 
+           vjust = -1, color = "red", fontface = "bold", size = 7) +
   labs(
     title = "Age-Wage Profile",
     x = "Age",
     y = "Log(Hourly Wage)"
   ) +
+  scale_x_continuous(breaks = seq(min(db$age), max(db$age), by = 5)) +
   theme_minimal(base_size = 14) +
   theme(
     plot.title = element_text(hjust = 0.5, face = "bold"),
@@ -99,7 +84,10 @@ ggplot(data = db, aes(x = age, y = log_ingreso_laboral_horas_actuales)) +
     legend.position = "top"
   )
 
-
+# Export graph to "views"
+name <- "Age-Wage profile"
+link <- past0("views/", name, ".png")
+ggsave(link, plot = last_plot(), width = 8, height = 6)
 
 
 
