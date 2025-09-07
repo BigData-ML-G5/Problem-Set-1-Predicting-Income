@@ -211,7 +211,7 @@ db <- db %>%
   select(num_minors, hombre, num_minors, bin_head,age, bin_headFemale, 
     age2, estrato1,maximo_nivel_educativo, tamano_empresa,
     tiempo_empresa_actual,formal,hoursWorkUsual,
-    ingreso_laboral_horas_actuales, oficio
+    ingreso_laboral_horas_actuales, oficio, mes
   )
 
 # Apply factor to categorics
