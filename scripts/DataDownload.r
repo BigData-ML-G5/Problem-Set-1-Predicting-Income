@@ -207,6 +207,24 @@ head(db_miss, 10) # Show the 10 first observations
 db_clean <- db %>% select(-all_of(db_miss$skim_variable[db_miss$p_missing > 0.8]))
 names(db_clean)
 
+db <- db %>%
+  select(
+    num_minors, 
+    hombre, 
+    num_minors, 
+    bin_head, 
+    age, 
+    bin_headFemale, 
+    age2, 
+    estrato1,
+    maximo_nivel_educativo,
+    tamano_empresa,
+    tiempo_empresa_actual,
+    formal,
+    hoursWorkUsual,
+    ingreso_laboral_horas_actuales
+  )
+
 #TODO: están quedndo 19k / 36k, no sé si esté bien
 
 # -----------------------------------------------------
