@@ -6,9 +6,10 @@
 # 2) Save the data in a structure
 # 3) Clean data and create variables
 # 4) Descriptive statistics
-#    4.1) Check variables distributions (histograms)
-#    4.2) Imputation of missing values
+#    4.1) Descriptive statistics
+#    4.2) Check variables distributions (histograms)
 #    4.3) Statistics on variables to check for correlation
+#    4.4) Imputation of missing values
 # -----------------------------------------------------
 
 # -----------------------------------------------------
@@ -163,8 +164,6 @@ db <- db %>%
   )
 
 # Create a variable number of minors
-# TODO: 1) está cambiando datos sobre db, no db_clean
-# TODO: 2) quitar positive_hours_worked quita N/A, quedan 9783
 db <- db %>%
   mutate(bin_minor = ifelse(test = age <= 18, yes = 1, no = 0))
 
@@ -195,7 +194,6 @@ db_miss<- db_miss %>% mutate(p_missing= n_missing/nobs) # new variable of number
 db_miss <- db_miss %>% arrange(-n_missing) # descendant order
 db_miss<- db_miss %>% filter(n_missing!= 0) # keep only NA
 head(db_miss, 10) # Show the 10 first observations
-#Check if the 80% plus missing value columns are worth it or can be deleted
 
 ## TODO: FALTA REVISAR
 # TODO: Las que sean categóricas +2 categorías transformar as.factor
@@ -220,11 +218,37 @@ db <- db %>%
     ingreso_laboral_horas_actuales
   )
 
+# Delete those variables with more than 80% of missing values
+# This db is only for code developing purposes; helping the team understand the data,
+# not used in the final report
+db_clean <- db %>% select(-all_of(db_miss$skim_variable[db_miss$p_missing > 0.8]))
+names(db_clean)
+
+db <- db %>%
+  select(num_minors, hombre, num_minors, bin_head,age, bin_headFemale, 
+    age2, estrato1,maximo_nivel_educativo, tamano_empresa,
+    tiempo_empresa_actual,formal,hoursWorkUsual,
+    ingreso_laboral_horas_actuales, oficio
+  )
+
+# Apply factor to categorics
+db <- db %>%
+  mutate(estrato1 = as.factor(estrato1)) %>%
+  mutate(maximo_nivel_educativo = as.factor(maximo_nivel_educativo)) %>%
+  mutate(tamano_empresa = as.factor(tamano_empresa)) %>%
+  mutate(oficio = as.factor(oficio)) %>%
+  mutate(log_ingreso_laboral_horas_actuales = log(ingreso_laboral_horas_actuales))
+
+
 # -----------------------------------------------------
-# 4) Descriptive statistics
+# 4.1) Descriptive statistics
 # -----------------------------------------------------
 # Controlled variables = estrato1 - maximo_nivel_educativo - tamano_empresa - tiempo_empresa_actual - 
 # formal - age - hoursWorkUsual, num_minors, hombre, bin_head, bin_head_Female
+# Independent variable - ingreso_laboral_horas_actuales = Base labor income excluding bonuses, 
+# allowances, and subsidies
+# Controlled variables = estrato1 - maximo_nivel_educativo - tamano_empresa - tiempo_empresa_actual - 
+# formal - age - hoursWorkUsual
 
 # ingreso_laboral_horas_actuales = Base labor income excluding bonuses, allowances, and subsidies
 
@@ -376,6 +400,25 @@ setwd("/Users/gianlucacicco/Desktop/Taller 1 - BigData/Problem-Set-1-Predicting-
 ggsave("views/income_analysis_by_variables.jpg", combined_income_plots, 
        width = 15, height = 12, dpi = 300)
 
+# -----------------------------------------------------
+# 4.2) Check variables distributions (histograms)
+# -----------------------------------------------------
+
+# Total Income
+# TODO: put units to title
+ggplot(db, aes(x = ingreso_total_mensual)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Histogram Total Income",
+       x = "Monthly Income",
+       y = "Frequency")
+
+# Total Income / Hours Worked
+ggplot(db, aes(x = ingreso_por_hora)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Histogram Income by hour",
+       x = "Income by hour",
+       y = "Frequency")
+
 # Create distribution plots
 # 1. Number of minors - Categorical
 d1 <- ggplot(db, aes(x = factor(num_minors))) +
@@ -498,45 +541,10 @@ ggsave("views/variable_distributions.jpg", combined_distributions,
        width = 16, height = 16, dpi = 300)
 
 # -----------------------------------------------------
-# 4.2) Imputation of missing values
-# -----------------------------------------------------
-
-# Income missing % by age
-db %>%
-  group_by(age) %>%
-  summarise(
-    n = n(),
-    n_miss = sum(is.na(ingreso_por_hora)),
-    p_miss = n_miss / n
-  ) %>%
-  ggplot(aes(x = age, y = p_miss)) +
-  geom_bar(stat = "identity", width = 1) +
-  labs(
-    title = "Proportion of missing values of Income by Age",
-    x = "Age",
-    y = "Proportion of missing values"
-  ) +
-  theme_minimal() +
-  geom_line(aes(group = 1), color = "blue") +
-  geom_point(data = . %>% filter(age == 18), aes(x = age, y = p_miss), color = "red", size = 3)
-
-# Imputate missing values of income by age group mean
-# We use age because it is a variable with 100% data, thus, no N/A conflict
-# TODO: hay que filtrar por si está desocupado (algo así), porque puede estar estudiando
-db <- db %>%
-  group_by(age) %>%
-  mutate(
-    ingreso_por_hora = ifelse(is.na(ingreso_por_hora), mean(ingreso_por_hora, na.rm = TRUE), ingreso_por_hora),
-    log_ingreso_por_hora = ifelse(is.na(log_ingreso_por_hora), mean(log_ingreso_por_hora, na.rm = TRUE), log_ingreso_por_hora)
-  ) %>%
-  ungroup()
-
-# -----------------------------------------------------
 # 4.3) Statistics on variables to check for correlation
 # -----------------------------------------------------
 
-## association with outcome 
-
+## association with income 
 yvar <- "ingreso_laboral_horas_actuales"
 controls <- c(
   "age","estrato1","formal",
@@ -616,29 +624,67 @@ assoc_y_corr_plot <- assoc_y_controls %>%
 
 assoc_y_corr_plot
 
-# % Missings by control
 
-#oficio: 0,48
-#maximo_nivel_educativo: 0,11
-#tamano_empresa: 0,4815
-#formal: 0,4815
-#age: 0
-#estrato1: 0
-#hoursWorkUsual: 0,48
+# -----------------------------------------------------
+# 4.4) Imputation of missing values
+# -----------------------------------------------------
 
-## Manejo de missing values de variables seleccionadas
+# Imputate missing values of income by age group mean
+# We use age, job and gender (hombre) because they are variables with 100% data, 
+# thus, no N/A conflict. 
 
-# Check nulls amount for a specific variable
+# 1st, we use all 3 filters
+db <- db %>%
+  mutate(age_grupo = case_when(
+      age < 25 ~ "18-24",
+      age >= 25 & age < 35 ~ "25-34",
+      age >= 35 & age < 45 ~ "35-44",
+      age >= 45 & age < 55 ~ "45-54",
+      age >= 55 & age < 60 ~ "55-60",
+      age >= 60 ~ "60+"
+    )) %>%
+  group_by(oficio, age_grupo, hombre) %>%
+  mutate(
+    ingreso_laboral_horas_actuales = ifelse(
+      is.na(ingreso_laboral_horas_actuales),
+      mean(ingreso_laboral_horas_actuales, na.rm = TRUE),
+      ingreso_laboral_horas_actuales
+    ),
+    log_ingreso_laboral_horas_actuales = ifelse(
+      is.na(log_ingreso_laboral_horas_actuales),
+      mean(log_ingreso_laboral_horas_actuales, na.rm = TRUE),
+      log_ingreso_laboral_horas_actuales
+    )
+  ) %>%
+  ungroup()
 
-cols <- colnames(db)
+# 2nd, we take down filter of gender, because cases appeared where no data for
+# all 3 variables was available to impute (same age, job and gender)
 
-verify_nulls <- function(var_name) {
-  ifelse(var_name %in% cols, sum(is.na(db[[var_name]])), "var not found")
-}
+db <- db %>%
+  mutate(age_grupo = case_when(
+    age < 25 ~ "18-24",
+    age >= 25 & age < 35 ~ "25-34",
+    age >= 35 & age < 45 ~ "35-44",
+    age >= 45 & age < 55 ~ "45-54",
+    age >= 55 & age < 60 ~ "55-60",
+    age >= 60 ~ "60+"
+  )) %>%
+  group_by(oficio, age_grupo) %>%
+  mutate(
+    ingreso_laboral_horas_actuales = ifelse(
+      is.na(ingreso_laboral_horas_actuales),
+      mean(ingreso_laboral_horas_actuales, na.rm = TRUE),
+      ingreso_laboral_horas_actuales
+    ),
+    log_ingreso_laboral_horas_actuales = ifelse(
+      is.na(log_ingreso_laboral_horas_actuales),
+      mean(log_ingreso_laboral_horas_actuales, na.rm = TRUE),
+      log_ingreso_laboral_horas_actuales
+    )
+  ) %>%
+  ungroup()
 
-verify_nulls("ingreso_por_hora")
-
-# p6090 (afiliado a seguridad social), p6210 (nivel educativo max), p7040 (tenía otro trabajo?)
-# p7070 (cuánto recibió en ese 2ndo trabajo),
-
+# Eliminate few missing values that have no close age & job group
+db <- db %>% filter(!is.na(ingreso_laboral_horas_actuales))
 
