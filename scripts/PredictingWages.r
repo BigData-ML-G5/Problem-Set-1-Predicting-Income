@@ -81,7 +81,7 @@ score2a
 # Train our models - Model 3
 form_3 <- log_ingreso_laboral_horas_actuales ~ age + age2 + estrato1 + formal + 
   tamano_empresa + maximo_nivel_educativo + tiempo_empresa_actual + 
-  hoursWorkUsual + factor(oficio)
+  hoursWorkUsual + oficio + mes
 model3a <- lm(form_3, data = training)
 
 predictions <- predict(object = model3a, newdata = testing)
@@ -96,7 +96,7 @@ form_4 <- log_ingreso_laboral_horas_actuales ~ poly(age,3,raw=TRUE) +
   poly(age,3,raw=TRUE):maximo_nivel_educativo +
   poly(age,3,raw=TRUE):hombre +
   maximo_nivel_educativo:hombre +
-  estrato1:maximo_nivel_educativo + factor(oficio)
+  estrato1:maximo_nivel_educativo + oficio + mes
 model4a <- lm(form_4, data = training)
 predictions <- predict(object = model4a, newdata = testing)
 score4a <- RMSE(pred = predictions, obs = testing$log_ingreso_laboral_horas_actuales)
@@ -110,7 +110,7 @@ form_5 <- log_ingreso_laboral_horas_actuales ~ poly(age,3,raw=TRUE) +
   poly(age,3,raw=TRUE):tamano_empresa +
   formal:tamano_empresa + formal:hombre +
   hoursWorkUsual:tamano_empresa + 
-  tiempo_empresa_actual:formal + factor(oficio)
+  tiempo_empresa_actual:formal + oficio + mes
 model5a <- lm(form_5, data = training)
 predictions <- predict(object = model5a, newdata = testing)
 score5a <- RMSE(pred = predictions, obs = testing$log_ingreso_laboral_horas_actuales)
@@ -123,7 +123,7 @@ form_6 <- log_ingreso_laboral_horas_actuales ~ poly(age,3,raw=TRUE) +
   poly(age,3,raw=TRUE):num_minors +
   hombre:num_minors + hombre:bin_head +
   estrato1:num_minors + estrato1:hombre +
-  hoursWorkUsual:num_minors + bin_headFemale:estrato1 + factor(oficio)
+  hoursWorkUsual:num_minors + bin_headFemale:estrato1 + oficio + mes
 model6a <- lm(form_6, data = training)
 predictions <- predict(object = model6a, newdata = testing)
 score6a <- RMSE(pred = predictions, obs = testing$log_ingreso_laboral_horas_actuales)
@@ -136,7 +136,7 @@ form_7 <- log_ingreso_laboral_horas_actuales ~ poly(age,4,raw=TRUE) +
   poly(age,3,raw=TRUE):poly(maximo_nivel_educativo,2,raw=TRUE) +
   poly(age,3,raw=TRUE):hombre:formal +
   poly(estrato1,2,raw=TRUE):tamano_empresa +
-  hombre:poly(maximo_nivel_educativo,2,raw=TRUE) + factor(oficio)
+  hombre:poly(maximo_nivel_educativo,2,raw=TRUE) + factor(oficio) + mes
 model7a <- lm(form_7, data = training)
 predictions <- predict(object = model7a, newdata = testing)
 score7a <- RMSE(pred = predictions, obs = testing$log_ingreso_laboral_horas_actuales)
@@ -150,7 +150,7 @@ form_8 <- log_ingreso_laboral_horas_actuales ~ poly(age,3,raw=TRUE) +
   maximo_nivel_educativo:hombre + 
   formal:hombre + formal:tamano_empresa + 
   estrato1:maximo_nivel_educativo +
-  num_minors:hombre + oficio
+  num_minors:hombre + oficio + mes
 model8a <- lm(form_8, data = training)
 predictions <- predict(object = model8a, newdata = testing)
 score8a <- RMSE(pred = predictions, obs = testing$log_ingreso_laboral_horas_actuales)
@@ -163,7 +163,7 @@ score8a
 # -----------------------------------------------------
 
 # This matter was addressed and resolved in the final report.
-scores1 <- data.frame( Model= c(1, 2, 3, 4, 5, 6, 7, 8),
+tabla1 <- data.frame( Model= c(1, 2, 3, 4, 5, 6, 7, 8),
                       RMSE_vsa = c(score1a, score2a, score3a, score4a, score5a, score6a, score7a, score8a)
 )
 
@@ -217,24 +217,35 @@ rmse_model2 <- sqrt(looCV_error2)
 # Store the RMSE in dataframe (table)
 scores2 <- data.frame( Model= c(1, 2, 3, 4, 5, 6, 7, 8),
                      RMSE_vsa = c(score1a, score2a, score3a, score4a, score5a, score6a, score7a, score8a),
-                     RMSE_loocv = c(rmse_model1, rmse_model2)
+                     RMSE_loocv = c(rmse_model1, rmse_model2, 0, 0, 0, 0, 0, 0)
 )
 
-head(scores)
+head(scores2)
 
 # Graph
-RMSE_vsa   <-  c(score1a, score2a, score3a, score4a, score5a, score6a, score7a, score8a) 
-RMSE_loocv <-  c(rmse_model1, rmse_model2)
+RMSE_vsa   <- c(score1a, score2a, score3a, score4a, score5a, score6a, score7a, score8a) 
+RMSE_loocv <- c(rmse_model1, rmse_model2)
 
-
-scores<- data.frame( Model= rep(c(1, 2, 3, 4),3),
-                     Approach= c(rep("Validation",4),rep("K-Fold",4),rep("LOOCV",4)),
-                     RMSE= c(RMSE_vsa, RMSE_loocv)
+scores <- data.frame(
+  Model = c(1:8, 1:2),  # Modelos 1-8 para VSA, 1-2 para LOOCV
+  Approach = c(rep("Validation", 8), rep("LOOCV", 2)),
+  RMSE = c(RMSE_vsa, RMSE_loocv)
 )
 
-ggplot(scores, ) + 
-  geom_line(aes(x=Model,y=RMSE,col=Approach), size=0.5)+
-  theme_bw() 
+comparison_plot <- ggplot(scores, aes(x = Model, y = RMSE, color = Approach)) + 
+  geom_line(size = 0.5) + 
+  geom_point() +
+  labs(title = "Comparison of RMSE Across Different Validation Approaches",
+       subtitle = "Validation Set Approach vs Leave-One-Out Cross-Validation",
+       x = "Model Number",
+       y = "Root Mean Square Error (RMSE)") +
+  theme_bw() +
+  scale_x_continuous(breaks = 1:8)
+
+# Save the plot
+setwd("/Users/gianlucacicco/Desktop/Taller 1 - BigData/Problem-Set-1-Predicting-Income/views")
+ggsave("views/rmse_comparison.png", comparison_plot, 
+       width = 10, height = 6, dpi = 300)
 
 # Remember: The validation estimate can be highly variable depending on which observations 
 # are included in the training set and which are included in the validation set. This issue is clearly mitigated 
