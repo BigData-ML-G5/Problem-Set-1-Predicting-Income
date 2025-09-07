@@ -230,6 +230,9 @@ db <- db %>%
 
 ## TODO: Una vez ingreso no tenga missing values, eliminar la linea de codigo de ingreso > 0 y que no contenga NA
 
+### FOR GRAPH EXPORTS TO WORK, SET WORKING DIRECTORY TO THE MAIN FOLDER OF THE
+### PROJECT, NAMED "Problem-Set-1-Predicting-Income"
+
 # Mean by socioeconomic level (1 to 6)
 mean_se_level <- db %>%
   filter(!is.na(ingreso_laboral_horas_actuales), 
@@ -244,6 +247,12 @@ ggplot(mean_se_level, aes(x = factor(estrato1), y = media)) +
        x = "Socioeconomic Level",
        y = "Mean Income by Hour")
   theme_minimal()
+
+# Export graph to "views"
+name <- "mean_income by socioeconomic level"
+link <- past0("views/", name, ".png")
+ggsave(link, plot = last_plot(), width = 8, height = 6)
+
 
 # Mean by education level (1 to 7)
 mean_educ_level <- db %>%
