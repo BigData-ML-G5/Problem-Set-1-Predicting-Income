@@ -162,24 +162,6 @@ db <- db %>%
     cotiza_pension = cotPension, relacion_laboral = relab
   )
 
-# skim the number of missing values
-db_miss <- skim(db) %>% select(skim_variable, n_missing)
-
-# view missing values as percentage
-nobs <- nrow(db) # number of observations
-db_miss<- db_miss %>% mutate(p_missing= n_missing/nobs) # new variable of number of NA
-db_miss <- db_miss %>% arrange(-n_missing) # descendant order
-db_miss<- db_miss %>% filter(n_missing!= 0) # keep only NA
-head(db_miss, 10) # Show the 10 first observations
-#Check if the 80% plus missing value columns are worth it or can be deleted
-
-## TODO: FALTA REVISAR
-# TODO: Las que sean categóricas +2 categorías transformar as.factor
-
-#delete those variables with more than 80% of missing values
-db_clean <- db %>% select(-all_of(db_miss$skim_variable[db_miss$p_missing > 0.8]))
-names(db_clean)
-
 # Create a variable number of minors
 # TODO: 1) está cambiando datos sobre db, no db_clean
 # TODO: 2) quitar positive_hours_worked quita N/A, quedan 9783
@@ -206,6 +188,24 @@ db <- db %>% filter(age>18)
 
 # Create age squared
 db <- db %>% mutate(age2 = age*age)
+
+# skim the number of missing values
+db_miss <- skim(db) %>% select(skim_variable, n_missing)
+
+# view missing values as percentage
+nobs <- nrow(db) # number of observations
+db_miss<- db_miss %>% mutate(p_missing= n_missing/nobs) # new variable of number of NA
+db_miss <- db_miss %>% arrange(-n_missing) # descendant order
+db_miss<- db_miss %>% filter(n_missing!= 0) # keep only NA
+head(db_miss, 10) # Show the 10 first observations
+#Check if the 80% plus missing value columns are worth it or can be deleted
+
+## TODO: FALTA REVISAR
+# TODO: Las que sean categóricas +2 categorías transformar as.factor
+
+#delete those variables with more than 80% of missing values
+db_clean <- db %>% select(-all_of(db_miss$skim_variable[db_miss$p_missing > 0.8]))
+names(db_clean)
 
 #TODO: están quedndo 19k / 36k, no sé si esté bien
 
@@ -362,12 +362,7 @@ ggplot(db, aes(x = ingreso_total_mensual)) +
 
 # Total Income / Hours Worked
 db <- db %>%
-  mutate(
-    # Adjust total_wage so no number is 0
-    # Multiplied by 4.33 to change from Weekly to Monthly
-    ingreso_por_hora = ifelse(ingreso_total_final == 0, 1, ingreso_total_final / (total_horas_trabajadas * 4.33)),
-    log_ingreso_por_hora = log(ingreso_por_hora)
-  )
+  mutate(log_ingreso_laboral_horas_actuales = log(ingreso_laboral_horas_actuales))
 
 ggplot(db, aes(x = ingreso_por_hora)) +
   geom_histogram(bins = 30) +
@@ -524,13 +519,12 @@ assoc_y_corr_plot
 #tamano_empresa: 0,4815
 #formal: 0,4815
 #age: 0
-#estrato1: 0,48
+#estrato1: 0
 #hoursWorkUsual: 0,48
 
 ## Manejo de missing values de variables seleccionadas
 
 # Check nulls amount for a specific variable
-
 
 cols <- colnames(db)
 
@@ -539,7 +533,6 @@ verify_nulls <- function(var_name) {
 }
 
 verify_nulls("ingreso_por_hora")
-
 
 # p6090 (afiliado a seguridad social), p6210 (nivel educativo max), p7040 (tenía otro trabajo?)
 # p7070 (cuánto recibió en ese 2ndo trabajo),
