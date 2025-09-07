@@ -654,3 +654,4 @@ db <- db %>%
 # Eliminate few missing values that have no close age & job group
 db <- db %>% filter(!is.na(ingreso_laboral_horas_actuales))
 
+write.csv(db, "db_ready.csv", row.names = FALSE)
