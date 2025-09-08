@@ -65,14 +65,14 @@ summary(fwl_model)
 # 2.2) Conditional earnings gap with worker and job controls (FWL and bootstrap)
 # -----------------------------------------------------
 
-#Step 1: FWL estimation using 2.1)
+#FWL estimation using 2.1)
 ry <- resid(lm(as.formula(paste(yvar, " ~ ", rhs)), data = df))
 rx <- resid(lm(as.formula(paste(dvar, " ~ ", rhs)), data = df))
 fwl_model <- lm(ry ~ rx)
 beta_fwl   <- coef(fwl_model)[["rx"]]
 se_fwl_ols <- coef(summary(fwl_model))["rx","Std. Error"]
 
-#Step 2: Non-parametric bootstrap
+#Non-parametric bootstrap
 fwl_boot_fn <- function(data, index){
   bd <- data[index, ]
   ry_b <- resid(lm(as.formula(paste(yvar, " ~ ", rhs)), data = bd))
@@ -105,19 +105,19 @@ comparison
 # Table 1: Wage gap (Female) — LaTeX (sin paquetes)
 # ===============================
 
-# 0) Female = 1 - hombre
+# Female = 1 - hombre
 if (!"female" %in% names(db)) db$female <- 1L - db$hombre
 if (exists("df") && !"female" %in% names(df)) df$female <- 1L - df$hombre
 
-# 1) (A) Unconditional OLS: log w ~ Female (muestra mínima necesaria)
+# 1) Unconditional OLS
 dfA  <- na.omit(db[, c(yvar, "female")])
 modA <- lm(as.formula(paste(yvar, "~ female")), data = dfA)
 
-# 2) (B) Conditional OLS (full, ≡ FWL) con EXACTO RHS y misma muestra 'df'
+# 2) FWL with controls and FE
 modB <- lm(as.formula(paste(yvar, " ~ female + ", rhs)), data = df)
 
-# 3) (C) Condicional con SE bootstrap (reusa tu FWL)
-#    Si no existen beta_fwl / se_np, los calculamos aquí:
+# 3) FWL with non-parametric bootstrap
+
 if (!exists("beta_fwl") || !exists("se_np")) {
   ry <- resid(lm(as.formula(paste(yvar, " ~ ", rhs)), data = df))
   rx <- resid(lm(as.formula(paste("hombre ~ ", rhs)), data = df))
@@ -130,12 +130,14 @@ if (!exists("beta_fwl") || !exists("se_np")) {
     coef(lm(ryb ~ rxb))[2]
   }, R = 1000)$t)
 }
-# Queremos el coeficiente de *Female* (opuesto a 'hombre')
+# We want to report female coefficient in the table so we have to adjust the results as:
+
 betaC <- -as.numeric(beta_fwl)
 seC   <-  as.numeric(se_np)
 pC    <- 2 * pnorm(abs(betaC / seC), lower.tail = FALSE)
 
-# 4) Extrae números y da formato
+# Numbers to put in the table
+
 coefA <- coef(modA)["female"]; seA <- coef(summary(modA))["female","Std. Error"]; pA <- coef(summary(modA))["female","Pr(>|t|)"]
 coefB <- coef(modB)["female"]; seB <- coef(summary(modB))["female","Std. Error"]; pB <- coef(summary(modB))["female","Pr(>|t|)"]
 
@@ -145,7 +147,7 @@ r2A <- summary(modA)$r.squared; r2B <- summary(modB)$r.squared
 fmt   <- function(x) formatC(x, format = "f", digits = 3)
 stars <- function(p) ifelse(p < .01, "***", ifelse(p < .05, "**", ifelse(p < .10, "*", "")))
 
-# 5) Ensambla LaTeX y exporta
+# Table with coefficients and Standard Errors in Latex
 
 if (!dir.exists("views")) dir.create("views", recursive = TRUE)
 
@@ -320,6 +322,8 @@ writeLines(tex, "views/table_peak_ages.tex")
 # -----------------------------------------------------
 # 3.4) Plot with peak ages by gender
 # -----------------------------------------------------
+
+#Define data frames for the plot
 
 peaks_df <- data.frame(
   sexo   = c("Men","Women"),
